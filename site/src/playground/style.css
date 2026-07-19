@@ -75,6 +75,58 @@ button:disabled {
   cursor: default;
 }
 
+select#examples {
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid #3b3a32;
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+/* Match the CodeMirror editors to the exact Jim Monokai palette (the CDN
+   monokai theme is close but not identical). Selectors mirror the theme's
+   specificity (.cm-s-monokai span.cm-*) and load after it, so these win. */
+.cm-s-monokai.CodeMirror {
+  background: var(--panel);
+  color: var(--fg);
+}
+.cm-s-monokai .CodeMirror-gutters {
+  background: var(--panel);
+  border-right: 1px solid #000;
+}
+.cm-s-monokai span.cm-comment {
+  color: #75715e;
+  font-style: italic;
+}
+.cm-s-monokai span.cm-string {
+  color: #e6db74;
+}
+.cm-s-monokai span.cm-keyword {
+  color: #f92672;
+}
+.cm-s-monokai span.cm-meta {
+  color: #fd971f;
+}
+.cm-s-monokai span.cm-atom {
+  color: #ae81ff;
+}
+.cm-s-monokai span.cm-number {
+  color: #ae81ff;
+}
+.cm-s-monokai span.cm-variable-2 {
+  color: #66d9ef;
+  font-style: italic;
+}
+.cm-s-monokai span.cm-variable-3 {
+  color: #fd971f;
+  font-style: italic;
+}
+.cm-s-monokai span.cm-def {
+  color: #a6e22e;
+}
+
 main {
   flex: 1;
   display: grid;

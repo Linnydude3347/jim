@@ -1,7 +1,8 @@
 # Language Tour
 
-A quick pass over the whole language. For runnable, fuller programs see
-[Examples](examples.md).
+The whole language in a few pages. Every snippet is valid jim; for complete
+runnable programs see [Examples](examples.md), or try them live in the
+[Playground](playground.md).
 
 ## Variables, constants, and types
 
@@ -16,78 +17,219 @@ const day: Integer = 1;     // cannot be reassigned
 
 Every variable needs a type annotation and an initializer. `var f: Float = 3;`
 is an error — write `3.0` (Integer literals never silently become Floats).
+Variables shadow outer scopes but cannot be redeclared in the same scope.
 
-## Functions
+## Conversions
 
 ```jim
-// A block of `//` comments above a declaration becomes its docstring.
-function add(a: Integer, b: Integer) -> Integer {
-    return a + b;
-}
+var f: Float = 3.to_float();
+var i: Integer = 3.9.to_integer();   // truncates toward zero: 3
+var s: String = 42.to_string();
+var n: Integer = 'A'.to_integer();   // byte value: 65
 ```
 
-`main` returns `Integer` (the process exit code) and may omit its `return`.
+Conversions are explicit, via methods. The only implicit one is Integer→Float
+in mixed arithmetic.
 
 ## Operators are method calls
 
 The heart of jim: `a + b` is sugar for `a.plus(b)`, `a < b` for
-`a.less_than(b)`. Define those methods on your own types and the operators just
-work.
+`a.less_than(b)`. Comparisons derive from `equals` and `less_than` alone.
+Define those methods on your own types and the operators just work (see
+[Classes](#classes)).
+
+`and`, `or`, `not`, and `div` (integer division) are word operators. Note
+`7 / 2` is `3.5` — use `7 div 2` for integer division.
+
+## Strings
 
 ```jim
-class Vec2 {
-    public x: Integer = 0;   // fields need a visibility and a default
-    public y: Integer = 0;
-
-    Vec2(x: Integer, y: Integer) {   // constructor: class name, no return type
-        this.x = x;
-        this.y = y;
-    }
-
-    public plus(other: Vec2) -> Vec2 {
-        return Vec2(this.x + other.x, this.y + other.y);
-    }
-}
-
-var sum: Vec2 = Vec2(1, 2) + Vec2(3, 4);   // calls Vec2.plus
+var s: String = "jim";
+s = s + "!";                 // concatenation builds a NEW string
+var n: Integer = s.length(); // bytes (UTF-8)
+if (s == "jim!") { }         // value comparison
+var first: Char = s[0];      // 'j' — indexing yields the byte at i
 ```
+
+Strings are **immutable** — there is no `String.set`; every "modification"
+builds a new string. Because `String` has `length()` and `get()`, it's
+iterable. Escapes: `\n \t \r \0 \\ \" \'`.
 
 ## Control flow
 
 ```jim
-for (var i: Integer = 0; i < 10; i = i + 1) {
-    if (i div 2 == 0) { continue; }
-    print(i.to_string());
+if (condition) {
+    // ...
+} else if (other) {
+    // ...
+} else {
+    // ...
+}
+
+while (count < 3) { count++; }
+
+for (i: Integer = 0; i < 10; i++) {
+    if (i == 2) continue;   // single-statement bodies may omit braces
+    if (i == 7) break;
 }
 ```
 
-jim has C-style `for`, plus `while`, `break`, and `continue`. `and`, `or`,
-`not`, and `div` (integer division) are word operators.
+Conditions must be `Bool` — there is no truthiness. Loop variables in a `for`
+header omit `var`. `++`/`--` are statements, not expressions.
+
+## Functions
+
+```jim
+function greet(name: String, excited: Bool) -> String {
+    if (excited) { return "HELLO " + name; }
+    return "hello " + name;
+}
+```
+
+The return type is mandatory (`-> None` for no value). A non-None function
+must return on every path — the compiler checks. There is no overloading: one
+name, one signature. `main` returns `Integer` (the exit code) and may omit its
+`return`.
+
+## Arrays and Vectors
+
+`Array<T>` is fixed-length; `Vector<T>` grows.
+
+```jim
+var nums: Array<Integer> = [1, 2, 3, 4, 5];   // literal
+var v: Vector<Integer> = [1, 2, 3];
+var a: Array<Integer> = Array(5);             // 5 slots, uninitialized — fill first!
+
+var first: Integer = nums[0];   // 0-indexed; out of bounds panics
+nums[1] += 10;                  // compound index assignment
+v.push(4);
+var last: Integer = v.pop();
+
+for (x: Integer in v) { /* for..in over any container */ }
+```
+
+Literals and `Array(n)`/`Vector()` take their element type from context (the
+declared type, a parameter, or a return type) — a bare `[1, 2]` with nothing to
+type it is a compile error. Containers nest freely
+(`Vector<Vector<Integer>>`), each combination stamped out at compile time.
 
 ## Optionals
 
-A `T?` is either a `T` or `None`. Parsing and lookups return optionals.
+`T?` is "a T or None" — jim's alternative to null.
 
 ```jim
-var maybe: Integer? = "42".to_i64();
+function find(v: Vector<Integer>, wanted: Integer) -> Integer? {
+    for (i: Integer = 0; i < v.length(); i++) {
+        if (v[i] == wanted) { return i; }   // Integer wraps into Integer?
+    }
+    return None;                            // None takes its type from context
+}
 ```
 
-## Containers
+There is no flow-typing: a `T?` stays a `T?`, but using it where a `T` is
+needed **unwraps it automatically** — and panics (catchably) if it was `None`.
+Nested optionals (`T??`) don't exist.
+
+## Classes
 
 ```jim
-var xs: Array<Integer> = Array(10);   // fixed size, context-typed
-var v: Vector<Integer> = Vector();    // growable
+class Shape {
+    private width: Integer = 1;    // field defaults are mandatory
+    private height: Integer = 1;
+
+    Shape(width: Integer, height: Integer) {   // at most one constructor;
+        this.width = width;                    // omit it for an auto default
+        this.height = height;
+    }
+
+    public area() -> Integer {
+        return this.width * this.height;        // members ONLY via this.
+    }
+}
 ```
+
+Instantiation is a class-name call: `Shape(3, 4)`. Members are accessed
+**only** through `this.` inside methods; bare names are an error. Classes are
+**references** — assignment shares the object, and `const` prevents rebinding,
+not mutation (shallow). There is no inheritance; composition is the tool.
+
+### Operators on your own classes
+
+Implementing reserved method names gives your class real operators — `plus`
+backs `+`, `equals` backs `==`/`!=`, `less_than` backs `<`/`>`/`<=`/`>=`,
+`get`/`set` back indexing. A class with `length()` and `get(i)` is even
+iterable with `for..in`.
+
+## Generic functions
+
+One definition for every sequence type — `Array<T>`, `Vector<T>`, even
+`String`:
+
+```jim
+function largest<C, T>(seq: C) -> T {
+    var best: T = seq[0];
+    for (i: Integer = 1; i < seq.length(); i++) {
+        if (seq[i] > best) { best = seq[i]; }
+    }
+    return best;
+}
+
+var a: Array<Integer> = [3, 9, 4, 1];
+var big: Integer = largest(a);   // T = Integer (expected type), C = Array<Integer>
+```
+
+Type parameters are filled from, in order: explicit arguments
+(`largest<Array<Integer>, Integer>(a)`), the argument types, then the expected
+type. Each distinct combination is monomorphized — a generic call costs the
+same as a hand-written one. Limits: free functions only (no generic methods),
+no constraint syntax (the body is the constraint, checked per instantiation).
+The standard library ships `max`, `min`, and `sum` as generics built this way.
+
+## Pointers
+
+```jim
+function bump(p: *Integer) -> None {
+    *p += 1;                 // write through the pointer
+}
+
+function main() -> Integer {
+    var age: Integer = 24;
+    bump(&age);              // pass by reference: age is now 25
+    return 0;
+}
+```
+
+Safety rules, all compile errors: no pointer arithmetic; `&` only on non-const
+variables; no `**T`; functions cannot return pointers; fields cannot hold
+pointers; no containers of pointers; and `p = &y` is rejected when `y` lives in
+an inner scope. Memory is arena-allocated and freed at exit — there is no
+`free()`.
 
 ## Errors: try / catch
 
 ```jim
 try {
-    risky();
+    var v: Vector<Integer> = [1];
+    var x: Integer = v[5];         // bounds panic from the std library
 } catch (e: Exception) {
-    print(e.to_string());
+    print("caught: " + e.msg());   // "Vector index out of bounds"
 }
 ```
 
-Every panic is catchable — including `@panic` raised from standard-library
-code. There is no `throw`.
+Everything that panics is catchable: `None` misuse, division by zero, integer
+overflow, out-of-bounds, and anything the std library raises with `@panic`. An
+uncaught panic prints its message and exits with code 1. There is no `throw` —
+raising is the standard library's job.
+
+## Modules
+
+```jim
+#import <io>            // std library: resolves to std/io.j
+#import <math>          // std/math.j
+#import "geometry.j"    // your own file, relative to the importing file
+```
+
+Imports are idempotent — a file loads once no matter how often it's imported.
+All top-level functions and classes share one global namespace. `std/core.j`
+is the prelude, imported into every program automatically — that's where
+`Integer`, `String`, `Vector` and friends come from.
