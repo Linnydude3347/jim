@@ -1,0 +1,178 @@
+// jim is a compiled language. It will be runnable on Windows, macOS, and Linux.
+// File extension: .j
+// Code specs are as follows: 
+
+// This is a comment
+// This is also a comment //
+// There are no multiline comments //
+
+// Entry point will be on main(), available in two forms:
+function main() -> Integer {}
+function main(argv: Array<String>) -> Integer {}
+
+// These are data types (and keywords)
+// String, Integer, Float, Char, Bool, Exception, Array, Vector, None
+// (note that the above line are objects and will be implemented with member functions as well)
+// true, false
+
+// Integers are 64 bit signed
+// Floats are 64-bit double
+
+// These are variables and constants
+
+var name: String = "Ben";
+var age: Integer = 24;
+var pi: Float = 3.14;
+var c: Char = 'c';
+var is_alive: Bool = true; // Can be true/false, NOT True/False
+const day: Integer = 1; // cannot be changed
+
+// These are data structures (they can also be const (immutable))
+// Arrays are not growable, Vectors can be resized
+
+var nums: Array<Integer> = [1, 2, 3, 4, 5];
+var letters: Array<Char> = ['a', 'b', 'c'];
+const cannot_change: Array<String> = ["Cannot", "change", "me"];
+var v: Vector<Integer> = [1, 2, 3, 4, 5];
+
+// Arrays and Vectors are indexable as well
+// Arrays and Vectors are 0-indexed
+var first: Integer = nums[0];
+
+// Mutable arrays/vectors can be changed as well by indexing
+nums[0] = 6;
+
+// These are if/for/while statements
+
+if (is_alive) {
+    age = 25;
+}
+
+if (condition) {
+
+} else if (other_condition) {
+
+} else {
+
+}
+
+for (i: Integer = 0; i < 10; i++) {
+
+}
+
+for (number: Integer in nums) {
+    print(number);
+    if (number == 1) continue;
+    if (number == 2) break;
+}
+
+while (condition) {
+
+}
+
+// These are available operations (much like Python's available operations)
+// +, -, *, /, %, +=, -=, *=, /=, ++, --, div
+// =, ==, !=, <, <=, >, >=, and, or, not
+// 7 / 2 = 3.5
+
+// Here is how you import files
+
+// Built in libraries
+
+#import <io>
+#import <math>
+
+// Third party or user-written libraries
+
+#import "other_file.j"
+
+// Pointers and References
+// This will function much like Zig, where safety is #1 priority, but with C syntax
+// At the termination of a program, all allocated memory will be automatically freed,
+// so a free(...) function will not be needed
+
+var age_ptr: *Integer = &age;
+*age_ptr = 35; // this changes "age" to 35;
+
+// Functions
+
+function get_age() -> Integer {
+    return 25;
+}
+
+function get_value() -> String {
+    var value: String = "Example";
+    return value;
+}
+
+function compare(a: Integer, b: Integer) -> Integer {
+
+}
+
+#import <io>
+function print_value() -> None {
+    print("...");
+}
+
+// Functions can also optionally return nothing, hinted by ?
+// It is up to the caller to determine if they received a value, or None
+function may_return_nothing() -> Integer? {
+    // ... function stuff here ...
+}
+
+// A caller can handle this as follows:
+var a: Integer? = may_return_nothing();
+if (a != None) {
+    // ... continue ...
+}
+
+// Classes (similar to C++, with Java style syntax mixed in)
+// Access member variables within a class is restricted ONLY to "this."
+
+class Shape {
+
+    private width: Integer = 1;
+    private height: Integer = 1;
+
+    // Classes do not need a default constructor written by the user
+
+    Shape(width: Integer, height: Integer) {
+
+    }
+
+    // Classes can also have member functions, public and private
+
+    public getWidth() -> Integer {
+        return this.width;
+    }
+
+    private doSomething() -> None {
+        // ... do some private class thing here ...
+    }
+
+}
+
+// Error handling
+
+#import <io>
+
+function definitely_returns_none() -> Integer? {
+    return None;
+}
+
+try {
+    var a: Integer? = definitely_returns_none();
+    var b: Integer = a + 1;
+} catch (e: Exception) {
+    print("Something went wrong: " + e.msg());
+}
+
+// Intrinsic marker
+// In standard library function, using @ marks a function/step
+// that the compile does natively.
+
+class Integer {
+    public to_string() -> String {
+        return @i64_to_string(this);
+    }
+}

@@ -1,0 +1,134 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "jim",
+    "scopeName": "source.jim",
+    "patterns": [
+        { "include": "#comments" },
+        { "include": "#imports" },
+        { "include": "#strings" },
+        { "include": "#chars" },
+        { "include": "#function-declaration" },
+        { "include": "#class-declaration" },
+        { "include": "#method-declaration" },
+        { "include": "#keywords" },
+        { "include": "#storage" },
+        { "include": "#word-operators" },
+        { "include": "#constants" },
+        { "include": "#this" },
+        { "include": "#intrinsics" },
+        { "include": "#numbers" },
+        { "include": "#builtin-types" },
+        { "include": "#constructor-call" },
+        { "include": "#function-call" },
+        { "include": "#user-types" },
+        { "include": "#operators" }
+    ],
+    "repository": {
+        "comments": {
+            "match": "//.*$",
+            "name": "comment.line.double-slash.jim"
+        },
+        "imports": {
+            "match": "(#import)\\s*(<[A-Za-z_][A-Za-z0-9_]*>)?",
+            "captures": {
+                "1": { "name": "keyword.control.import.jim" },
+                "2": { "name": "string.quoted.other.import.jim" }
+            }
+        },
+        "strings": {
+            "begin": "\"",
+            "end": "\"",
+            "name": "string.quoted.double.jim",
+            "patterns": [
+                {
+                    "match": "\\\\[ntr0\\\\\"']",
+                    "name": "constant.character.escape.jim"
+                }
+            ]
+        },
+        "chars": {
+            "match": "'(\\\\[ntr0\\\\\"']|[^'\\\\])'",
+            "name": "string.quoted.single.jim",
+            "captures": {
+                "1": { "name": "constant.character.jim" }
+            }
+        },
+        "function-declaration": {
+            "match": "\\b(function)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+            "captures": {
+                "1": { "name": "storage.type.function.jim" },
+                "2": { "name": "entity.name.function.jim" }
+            }
+        },
+        "class-declaration": {
+            "match": "\\b(class)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+            "captures": {
+                "1": { "name": "storage.type.class.jim" },
+                "2": { "name": "entity.name.type.class.jim" }
+            }
+        },
+        "method-declaration": {
+            "match": "\\b(public|private)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(?=\\()",
+            "captures": {
+                "1": { "name": "storage.modifier.jim" },
+                "2": { "name": "entity.name.function.method.jim" }
+            }
+        },
+        "keywords": {
+            "match": "\\b(if|else|for|while|in|break|continue|return|try|catch)\\b",
+            "name": "keyword.control.jim"
+        },
+        "storage": {
+            "match": "\\b(var|const|function|class|public|private)\\b",
+            "name": "storage.type.jim"
+        },
+        "word-operators": {
+            "match": "\\b(and|or|not|div)\\b",
+            "name": "keyword.operator.word.jim"
+        },
+        "constants": {
+            "match": "\\b(true|false|None)\\b",
+            "name": "constant.language.jim"
+        },
+        "this": {
+            "match": "\\bthis\\b",
+            "name": "variable.language.this.jim"
+        },
+        "intrinsics": {
+            "match": "@[A-Za-z_][A-Za-z0-9_]*",
+            "name": "support.function.intrinsic.jim"
+        },
+        "numbers": {
+            "patterns": [
+                {
+                    "match": "\\b[0-9]+\\.[0-9]+\\b",
+                    "name": "constant.numeric.float.jim"
+                },
+                {
+                    "match": "\\b[0-9]+\\b",
+                    "name": "constant.numeric.integer.jim"
+                }
+            ]
+        },
+        "builtin-types": {
+            "match": "\\b(Integer|Float|Bool|Char|String|Exception|Array|Vector|RawBuffer)\\b",
+            "name": "support.type.builtin.jim"
+        },
+        "constructor-call": {
+            "match": "\\b([A-Z][A-Za-z0-9_]*)\\s*(?=\\()",
+            "name": "entity.name.type.constructor.jim"
+        },
+        "function-call": {
+            "match": "\\b([a-z_][A-Za-z0-9_]*)\\s*(?=\\(|<[A-Za-z_][A-Za-z0-9_<>,?* ]*>\\s*\\()",
+            "name": "support.function.call.jim"
+        },
+        "user-types": {
+            "match": "\\b[A-Z][A-Za-z0-9_]*\\b",
+            "name": "entity.name.type.jim"
+        },
+        "operators": {
+            "match": "->|\\+\\+|--|\\+=|-=|\\*=|/=|==|!=|<=|>=|[+\\-*/%=<>?&\\[\\]]",
+            "name": "keyword.operator.jim"
+        }
+    }
+}

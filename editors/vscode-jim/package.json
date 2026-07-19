@@ -1,0 +1,69 @@
+{
+    "name": "jim-lang",
+    "displayName": "jim language",
+    "description": "Syntax highlighting for the jim programming language (.j), with a Monokai-style theme",
+    "version": "0.3.3",
+    "publisher": "ben",
+    "engines": {
+        "vscode": "^1.75.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Themes"
+    ],
+    "main": "./extension.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "jim",
+                "aliases": [
+                    "jim"
+                ],
+                "extensions": [
+                    ".j"
+                ],
+                "configuration": "./language-configuration.json",
+                "icon": {
+                    "light": "./icons/jim-light.svg",
+                    "dark": "./icons/jim-dark.svg"
+                }
+            }
+        ],
+        "grammars": [
+            {
+                "language": "jim",
+                "scopeName": "source.jim",
+                "path": "./syntaxes/jim.tmLanguage.json"
+            }
+        ],
+        "themes": [
+            {
+                "label": "Jim Monokai",
+                "uiTheme": "vs-dark",
+                "path": "./themes/jim-monokai-color-theme.json"
+            }
+        ],
+        "configuration": {
+            "title": "jim",
+            "properties": {
+                "jim.compilerPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to jimc(.exe). Empty = auto-detect (workspace compiler/target/release, then PATH)."
+                },
+                "jim.stdPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Passed to jimc as --std. Empty = jimc auto-detects the std directory."
+                },
+                "jim.checkOnSave": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run 'jimc check' on save and show errors inline."
+                }
+            }
+        }
+    }
+}
+
+

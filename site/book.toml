@@ -1,0 +1,16 @@
+[book]
+title = "The jim Programming Language"
+authors = ["Ben Antonellis"]
+description = "jim — a small, explicit language whose operators desugar to method calls and which transpiles to a single C11 file."
+language = "en"
+src = "src"
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+additional-js = ["theme/jim-highlight.js"]
+# git-repository-url = "https://github.com/<user>/<repo>"   # uncomment once the remote is known
+# edit-url-template = "https://github.com/<user>/<repo>/edit/main/site/{path}"
+
+[output.html.search]
+enable = true

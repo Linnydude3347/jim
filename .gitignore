@@ -1,0 +1,19 @@
+# Rust build artifacts
+/compiler/target/
+
+# Compiled binaries / native output
+*.exe
+*.out
+
+# Generated C from the transpiler (keep sources, not emitted artifacts)
+*.gen.c
+
+# mdBook site output
+/site/book/
+
+# Ben's scratch program
+/program.j
+
+# OS / editor junk
+Thumbs.db
+.DS_Store

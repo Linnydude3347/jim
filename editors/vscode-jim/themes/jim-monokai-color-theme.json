@@ -1,0 +1,101 @@
+{
+    "name": "Jim Monokai",
+    "type": "dark",
+    "colors": {
+        "editor.background": "#272822",
+        "editor.foreground": "#F8F8F2",
+        "editor.lineHighlightBackground": "#3E3D32",
+        "editor.selectionBackground": "#49483E",
+        "editorCursor.foreground": "#F8F8F0",
+        "editorWhitespace.foreground": "#3B3A32",
+        "editorIndentGuide.background1": "#3B3A32",
+        "editorLineNumber.foreground": "#90908A",
+        "editorLineNumber.activeForeground": "#F8F8F2",
+        "sideBar.background": "#1E1F1C",
+        "sideBar.foreground": "#A5A6A0",
+        "activityBar.background": "#272822",
+        "statusBar.background": "#414339",
+        "statusBar.noFolderBackground": "#414339",
+        "titleBar.activeBackground": "#1E1F1C",
+        "tab.activeBackground": "#272822",
+        "tab.inactiveBackground": "#34352F",
+        "editorGroupHeader.tabsBackground": "#1E1F1C",
+        "panel.background": "#1E1F1C",
+        "terminal.background": "#1E1F1C",
+        "input.background": "#414339",
+        "dropdown.background": "#414339",
+        "list.activeSelectionBackground": "#75715E",
+        "list.hoverBackground": "#3E3D32"
+    },
+    "tokenColors": [
+        {
+            "name": "Comments",
+            "scope": ["comment", "punctuation.definition.comment"],
+            "settings": { "foreground": "#75715E" }
+        },
+        {
+            "name": "Strings and chars",
+            "scope": ["string", "string.quoted.other.import.jim"],
+            "settings": { "foreground": "#E6DB74" }
+        },
+        {
+            "name": "Escapes",
+            "scope": ["constant.character.escape"],
+            "settings": { "foreground": "#AE81FF" }
+        },
+        {
+            "name": "Numbers and language constants (true/false/None)",
+            "scope": ["constant.numeric", "constant.language"],
+            "settings": { "foreground": "#AE81FF" }
+        },
+        {
+            "name": "Keywords, storage, operators",
+            "scope": [
+                "keyword.control",
+                "keyword.operator",
+                "keyword.operator.word",
+                "storage.type",
+                "storage.modifier",
+                "keyword.control.import.jim"
+            ],
+            "settings": { "foreground": "#F92672" }
+        },
+        {
+            "name": "Function and method names",
+            "scope": [
+                "entity.name.function",
+                "support.function.call.jim"
+            ],
+            "settings": { "foreground": "#A6E22E" }
+        },
+        {
+            "name": "Class names at declaration",
+            "scope": ["entity.name.type.class.jim"],
+            "settings": { "foreground": "#A6E22E", "fontStyle": "underline" }
+        },
+        {
+            "name": "Types (built-in and user)",
+            "scope": [
+                "support.type.builtin.jim",
+                "entity.name.type",
+                "entity.name.type.constructor.jim"
+            ],
+            "settings": { "foreground": "#66D9EF", "fontStyle": "italic" }
+        },
+        {
+            "name": "this",
+            "scope": ["variable.language.this"],
+            "settings": { "foreground": "#FD971F", "fontStyle": "italic" }
+        },
+        {
+            "name": "Intrinsics (@...)",
+            "scope": ["support.function.intrinsic.jim"],
+            "settings": { "foreground": "#FD971F" }
+        },
+        {
+            "name": "Invalid",
+            "scope": ["invalid"],
+            "settings": { "foreground": "#F44747" }
+        }
+    ]
+}

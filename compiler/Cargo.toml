@@ -1,0 +1,11 @@
+[package]
+name = "jimc"
+version = "0.1.0"
+edition = "2021"
+description = "Compiler for the jim programming language"
+
+[dependencies]
+# none, deliberately — the compiler is a single self-contained binary
+
+[profile.release]
+opt-level = 2
