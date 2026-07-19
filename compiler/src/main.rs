@@ -1,12 +1,4 @@
-mod ast;
-mod codegen;
-mod driver;
-mod errors;
-mod lexer;
-mod parser;
-mod sema;
-mod token;
-
+use jimc::driver;
 use std::path::PathBuf;
 
 const USAGE: &str = "\

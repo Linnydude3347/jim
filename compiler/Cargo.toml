@@ -5,7 +5,18 @@ edition = "2021"
 description = "Compiler for the jim programming language"
 
 [dependencies]
-# none, deliberately — the compiler is a single self-contained binary
+# none, deliberately — the compiler is a single self-contained crate
+
+# The pipeline is exposed as a library (src/lib.rs) so embedders — notably the
+# browser playground's wasm build — can compile jim to C in memory. The CLI
+# (src/bin below) is a thin wrapper over it. Both stay dependency-free.
+[lib]
+name = "jimc"
+path = "src/lib.rs"
+
+[[bin]]
+name = "jimc"
+path = "src/main.rs"
 
 [profile.release]
 opt-level = 2

@@ -59,8 +59,13 @@ function main() -> Integer {
 #import <io>
 
 class Vec2 {
-    var x: Integer;
-    var y: Integer;
+    public x: Integer = 0;
+    public y: Integer = 0;
+
+    Vec2(x: Integer, y: Integer) {
+        this.x = x;
+        this.y = y;
+    }
 
     public plus(other: Vec2) -> Vec2 {
         return Vec2(this.x + other.x, this.y + other.y);
