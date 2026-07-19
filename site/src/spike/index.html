@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>jim A2 feasibility spike</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        background: #1e1f1c;
+        color: #f8f8f2;
+        margin: 0;
+        padding: 1.5rem;
+        line-height: 1.5;
+      }
+      h1 {
+        font-size: 1.2rem;
+      }
+      .muted {
+        color: #75715e;
+      }
+      button {
+        background: #a6e22e;
+        color: #1e1f1c;
+        border: 0;
+        border-radius: 4px;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        margin: 0.25rem 0.5rem 0.25rem 0;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      pre {
+        background: #272822;
+        border: 1px solid #3b3a32;
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        overflow: auto;
+        white-space: pre-wrap;
+        font-size: 13px;
+      }
+      .ok {
+        color: #a6e22e;
+      }
+      .err {
+        color: #f92672;
+      }
+      code {
+        color: #e6db74;
+      }
+      section {
+        border-top: 1px solid #3b3a32;
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>jim &mdash; A2 feasibility spike</h1>
+    <p class="muted">
+      Compiles C to WebAssembly in your browser with
+      <code>@wasmer/sdk</code>'s <code>clang/clang</code>, then runs it and
+      captures stdout. Testing whether jim's real generated C &mdash;
+      <strong>stdio + setjmp/longjmp</strong> &mdash; runs client-side. First
+      run downloads clang (~100&nbsp;MB uncompressed, one time; be patient).
+    </p>
+
+    <button id="run-jim">1 &nbsp;Run jim program (stdio + setjmp/longjmp)</button>
+    <button id="run-libm">2 &nbsp;Run libm test (sqrt/sin, for the future)</button>
+
+    <section>
+      <strong>Log</strong>
+      <pre id="log">idle.</pre>
+    </section>
+
+    <section>
+      <strong>Test 1 &mdash; jim program</strong>
+      <p class="muted">
+        Compiles the real C jimc emitted for a program that prints, then
+        triggers and <em>catches</em> a bounds panic (that catch is
+        setjmp/longjmp). Expected stdout:
+      </p>
+      <pre class="muted">hello from jim
+caught: Vector index out of bounds.
+done</pre>
+      <strong>clang stderr</strong>
+      <pre id="jim-cc">&mdash;</pre>
+      <strong>program stdout</strong>
+      <pre id="jim-out">&mdash;</pre>
+    </section>
+
+    <section>
+      <strong>Test 2 &mdash; libm</strong>
+      <p class="muted">Plain C calling <code>sqrt</code>/<code>sin</code> (proves <code>-lm</code> links, for when the std math wrappers are implemented).</p>
+      <strong>clang stderr</strong>
+      <pre id="libm-cc">&mdash;</pre>
+      <strong>program stdout</strong>
+      <pre id="libm-out">&mdash;</pre>
+    </section>
+
+    <script type="module">
+      import {
+        init,
+        Wasmer,
+        Directory,
+      } from "https://unpkg.com/@wasmer/sdk@0.8.0-beta.1/dist/index.mjs";
+
+      const logEl = document.getElementById("log");
+      const jimBtn = document.getElementById("run-jim");
+      const libmBtn = document.getElementById("run-libm");
+
+      function log(msg, cls) {
+        const line = cls ? `<span class="${cls}">${msg}</span>` : msg;
+        logEl.innerHTML += "\n" + line;
+      }
+
+      let clang = null;
+
+      async function getClang() {
+        if (clang) return clang;
+        log("Initializing @wasmer/sdk…");
+        await init();
+        log("Fetching clang/clang (large; one-time download)…");
+        clang = await Wasmer.fromRegistry("clang/clang");
+        log("clang ready.", "ok");
+        return clang;
+      }
+
+      // Compile `source` to wasm, then run it. Returns {ccStderr, stdout, stderr, ok}.
+      async function compileAndRun(source, filename, extraArgs) {
+        const cc = await getClang();
+        const project = new Directory();
+        await project.writeFile(filename, source);
+
+        const wasmName = filename.replace(/\.c$/, ".wasm");
+        log(`Compiling ${filename} → ${wasmName} …`);
+        const cinst = await cc.entrypoint.run({
+          args: [
+            `/project/${filename}`,
+            "-o",
+            `/project/${wasmName}`,
+            ...extraArgs,
+          ],
+          mount: { "/project": project },
+        });
+        const cout = await cinst.wait();
+        const ccStderr = cout.stderr || "";
+        if (!cout.ok) {
+          log(`clang failed (exit ${cout.code}).`, "err");
+          return { ok: false, ccStderr, stdout: "", stderr: "" };
+        }
+        log("Compiled. Running the produced wasm…");
+
+        const wasm = await project.readFile(wasmName);
+        const mod = await Wasmer.fromFile(wasm);
+        const rres = await mod.entrypoint.run();
+        const rout = await rres.wait();
+        log(`Program exited ${rout.code}.`, rout.code === 0 ? "ok" : "err");
+        return {
+          ok: true,
+          ccStderr,
+          stdout: rout.stdout || "",
+          stderr: rout.stderr || "",
+        };
+      }
+
+      jimBtn.addEventListener("click", async () => {
+        jimBtn.disabled = true;
+        libmBtn.disabled = true;
+        try {
+          log("\n--- Test 1: jim program ---");
+          const source = await (await fetch("./spike.c")).text();
+          log(`Fetched spike.c (${source.length} bytes).`);
+          // setjmp/longjmp on wasm needs the LLVM SjLj pass + libsetjmp.
+          const r = await compileAndRun(source, "spike.c", [
+            "-mllvm",
+            "-wasm-enable-sjlj",
+            "-lsetjmp",
+            "-lm",
+          ]);
+          document.getElementById("jim-cc").textContent = r.ccStderr || "(none)";
+          document.getElementById("jim-out").textContent =
+            (r.stdout || "(no stdout)") + (r.stderr ? "\n[stderr]\n" + r.stderr : "");
+        } catch (e) {
+          log("Exception: " + (e && e.message ? e.message : e), "err");
+          console.error(e);
+        } finally {
+          jimBtn.disabled = false;
+          libmBtn.disabled = false;
+        }
+      });
+
+      libmBtn.addEventListener("click", async () => {
+        jimBtn.disabled = true;
+        libmBtn.disabled = true;
+        try {
+          log("\n--- Test 2: libm ---");
+          const source = `#include <stdio.h>
+#include <math.h>
+int main(void) {
+    printf("sqrt(2) = %f\\n", sqrt(2.0));
+    printf("sin(1)  = %f\\n", sin(1.0));
+    return 0;
+}
+`;
+          const r = await compileAndRun(source, "libm.c", ["-lm"]);
+          document.getElementById("libm-cc").textContent = r.ccStderr || "(none)";
+          document.getElementById("libm-out").textContent =
+            (r.stdout || "(no stdout)") + (r.stderr ? "\n[stderr]\n" + r.stderr : "");
+        } catch (e) {
+          log("Exception: " + (e && e.message ? e.message : e), "err");
+          console.error(e);
+        } finally {
+          jimBtn.disabled = false;
+          libmBtn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
