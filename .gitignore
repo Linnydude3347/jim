@@ -1,5 +1,9 @@
 # Rust build artifacts
 /compiler/target/
+/playground/wasm/target/
+
+# wasm-pack output (generated into the site during CI)
+/playground/wasm/pkg/
 
 # Compiled binaries / native output
 *.exe

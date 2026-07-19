@@ -1,0 +1,43 @@
+name: Build playground wasm
+
+# Verifies the WebAssembly playground wrapper compiles and produces a usable
+# module. The compiler itself is zero-dependency and builds anywhere; this job
+# exists because the wasm-bindgen toolchain can't be built on every dev machine
+# (notably a rustup-GNU + MSYS2 host), so CI is the source of truth.
+#
+# Triggers on changes to the wasm wrapper or the compiler it embeds. Phase 3
+# will fold this build into the Pages deploy so the artifact ships with the site.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "playground/**"
+      - "compiler/**"
+      - "std/**"
+      - ".github/workflows/wasm.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (with wasm target)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build wasm module
+        run: wasm-pack build playground/wasm --target web --release --out-dir pkg
+
+      - name: Upload wasm package
+        uses: actions/upload-artifact@v4
+        with:
+          name: jim-playground-wasm
+          path: playground/wasm/pkg/
+          if-no-files-found: error
