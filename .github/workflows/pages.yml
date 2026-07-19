@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - "site/**"
+      - "playground/**"
+      - "compiler/**"
+      - "std/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -26,12 +29,32 @@ jobs:
       MDBOOK_VERSION: "0.4.40"
     steps:
       - uses: actions/checkout@v4
+
       - name: Install mdBook
         run: |
           curl -sSL "https://github.com/rust-lang/mdBook/releases/download/v${MDBOOK_VERSION}/mdbook-v${MDBOOK_VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
             | tar -xz -C /usr/local/bin
+
+      - name: Install Rust (with wasm target)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
       - name: Build the book
         run: mdbook build site
+
+      # Build the playground's wasm INTO the already-built book, so the compiler
+      # module ships alongside the page that loads it (site/book/playground/pkg/).
+      # Runs after `mdbook build` because mdbook cleans its output directory.
+      - name: Build the playground wasm into the site
+        run: |
+          mkdir -p site/book/playground
+          wasm-pack build playground/wasm --target web --release \
+            --out-dir "$GITHUB_WORKSPACE/site/book/playground/pkg"
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

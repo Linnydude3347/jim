@@ -1,21 +1,23 @@
 # Playground
 
-> **Coming soon.** The jim playground will run entirely in your browser — no
-> server, nothing to install.
+Write jim on the left; watch it compile to **C11** on the right — entirely in
+your browser. `jimc` is compiled to WebAssembly, so nothing is installed and
+nothing is sent to a server. It compiles against the **real** standard library.
 
-Because `jimc` is written in zero-dependency Rust, it compiles cleanly to
-**WebAssembly**. The first version of the playground (**"transpile mode"**) will
-let you:
+<p style="margin:1rem 0;">
+  <a href="playground/index.html" target="_blank" rel="noopener">Open the playground full-screen ↗</a>
+</p>
 
-1. Write jim in an in-browser editor.
-2. Compile it with `jimc` running as WebAssembly — right on this page.
-3. See the **generated C11** side by side with your source.
+<iframe
+  src="playground/index.html"
+  title="jim playground"
+  loading="lazy"
+  style="width:100%;height:80vh;border:1px solid #444;border-radius:6px;background:#1e1f1c;">
+</iframe>
 
-That last part is the point. jim's whole design is *"operators desugar to method
-calls, then transpile to one C file."* Watching your jim become C is the clearest
-possible window into how the language works.
+Why show the generated C at all? Because that *is* jim: operators desugar to
+method calls (`a + b` → `a.plus(b)`) and the whole program becomes one C11 file.
+Reading the C is the clearest window into how the language works.
 
-A later version may add in-browser **execution** (compiling and running the
-generated C with a WebAssembly C toolchain), but transpile mode ships first.
-
-*This page is a placeholder while the wasm build of `jimc` is wired up.*
+> Compiling against the real `std/` is deliberate — the playground runs the same
+> standard library the CLI does, so whatever breaks here breaks there.

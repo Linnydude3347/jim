@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>jim playground</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/monokai.min.css"
+    />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+  </head>
+  <body>
+    <header>
+      <div class="brand">jim <span>playground</span></div>
+      <div class="actions">
+        <span id="status" class="status">loading…</span>
+        <button id="run" disabled>Compile ▸</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="pane">
+        <div class="pane-title">your jim <span id="version"></span></div>
+        <div id="editor" class="editor"></div>
+      </section>
+      <section class="pane">
+        <div class="pane-title">generated C11</div>
+        <div id="output" class="editor"></div>
+        <pre id="error" class="error" hidden></pre>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
