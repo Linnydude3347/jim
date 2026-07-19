@@ -4,6 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>jim A2 feasibility spike</title>
+    <!-- Cross-origin isolation for Wasmer's threaded runtime (SharedArrayBuffer).
+         GitHub Pages can't set COOP/COEP headers, so a service worker injects
+         them. credentialless mode lets the cross-origin CDN + registry load
+         without needing CORP headers on them. Must load first, same-origin. -->
+    <script>
+      // coi-serviceworker calls this as a function — must be () => bool, not a bool.
+      window.coi = { coepCredentialless: () => true };
+    </script>
+    <script src="coi-serviceworker.js"></script>
     <style>
       body {
         font-family: system-ui, sans-serif;
@@ -68,6 +77,12 @@
       run downloads clang (~100&nbsp;MB uncompressed, one time; be patient).
     </p>
 
+    <p>
+      Cross-origin isolated:
+      <strong id="coi-status">checking…</strong>
+      <span class="muted" id="coi-hint"></span>
+    </p>
+
     <button id="run-jim">1 &nbsp;Run jim program (stdio + setjmp/longjmp)</button>
     <button id="run-libm">2 &nbsp;Run libm test (sqrt/sin, for the future)</button>
 
@@ -111,6 +126,19 @@ done</pre>
       const logEl = document.getElementById("log");
       const jimBtn = document.getElementById("run-jim");
       const libmBtn = document.getElementById("run-libm");
+
+      // The key signal: without this true, Wasmer's worker can't spawn.
+      const coiEl = document.getElementById("coi-status");
+      const coiHint = document.getElementById("coi-hint");
+      if (window.crossOriginIsolated) {
+        coiEl.textContent = "true";
+        coiEl.className = "ok";
+      } else {
+        coiEl.textContent = "false";
+        coiEl.className = "err";
+        coiHint.textContent =
+          " — if this stays false, hard-reload once (the service worker needs a reload to take effect).";
+      }
 
       function log(msg, cls) {
         const line = cls ? `<span class="${cls}">${msg}</span>` : msg;
