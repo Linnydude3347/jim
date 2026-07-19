@@ -195,23 +195,46 @@ done</pre>
         };
       }
 
+      // clang-16's wasi-libc keeps setjmp/longjmp INSIDE libc (the separate
+      // libsetjmp.a is a newer wasi-sdk split), so we try combos in order and
+      // stop at the first that compiles AND runs. clang stays cached, so the
+      // extra attempts are cheap.
+      const FLAG_SETS = [
+        { label: "sjlj, no -lsetjmp", args: ["-mllvm", "-wasm-enable-sjlj", "-lm"] },
+        { label: "-fwasm-exceptions + sjlj", args: ["-fwasm-exceptions", "-mllvm", "-wasm-enable-sjlj", "-lm"] },
+        { label: "sjlj + -lsetjmp", args: ["-mllvm", "-wasm-enable-sjlj", "-lsetjmp", "-lm"] },
+        { label: "no flags (baseline)", args: ["-lm"] },
+      ];
+
       jimBtn.addEventListener("click", async () => {
         jimBtn.disabled = true;
         libmBtn.disabled = true;
         try {
-          log("\n--- Test 1: jim program ---");
+          log("\n--- Test 1: jim program (trying flag combos) ---");
           const source = await (await fetch("./spike.c")).text();
           log(`Fetched spike.c (${source.length} bytes).`);
-          // setjmp/longjmp on wasm needs the LLVM SjLj pass + libsetjmp.
-          const r = await compileAndRun(source, "spike.c", [
-            "-mllvm",
-            "-wasm-enable-sjlj",
-            "-lsetjmp",
-            "-lm",
-          ]);
-          document.getElementById("jim-cc").textContent = r.ccStderr || "(none)";
-          document.getElementById("jim-out").textContent =
-            (r.stdout || "(no stdout)") + (r.stderr ? "\n[stderr]\n" + r.stderr : "");
+
+          let ccReport = "";
+          let ran = false;
+          for (const fs of FLAG_SETS) {
+            log(`\n> ${fs.label}  [${fs.args.join(" ")}]`);
+            const r = await compileAndRun(source, "spike.c", fs.args);
+            ccReport +=
+              `### ${fs.label}  [${fs.args.join(" ")}]\n` +
+              (r.ok ? "(compiled OK)\n\n" : (r.ccStderr || "(no stderr)") + "\n\n");
+            document.getElementById("jim-cc").textContent = ccReport;
+            if (r.ok) {
+              document.getElementById("jim-out").textContent =
+                (r.stdout || "(no stdout)") +
+                (r.stderr ? "\n[stderr]\n" + r.stderr : "");
+              log(`"${fs.label}" COMPILED + RAN.`, "ok");
+              ran = true;
+              break;
+            }
+            log(`"${fs.label}" failed to compile.`, "err");
+          }
+          if (!ran)
+            log("No combo produced a runnable wasm — see clang stderr above.", "err");
         } catch (e) {
           log("Exception: " + (e && e.message ? e.message : e), "err");
           console.error(e);
