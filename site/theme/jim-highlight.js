@@ -18,7 +18,12 @@
       },
       contains: [
         hljs.COMMENT("//", "$"),
-        { className: "meta", begin: "#import", end: "$" },
+        {
+          className: "meta",
+          begin: "#import\\b",
+          end: "$",
+          contains: [{ className: "string", begin: "<", end: ">" }],
+        },
         {
           className: "string",
           begin: '"',

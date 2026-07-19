@@ -1,0 +1,86 @@
+/* Jim Monokai — highlight.js theme for the jim docs site.
+ * Colors mirror editors/vscode-jim/themes/jim-monokai-color-theme.json so code
+ * on the site matches the VS Code extension. mdBook uses this file in place of
+ * its bundled highlight.css for every fenced code block. */
+
+.hljs {
+  display: block;
+  overflow-x: auto;
+  background: #272822;
+  color: #f8f8f2;
+}
+
+/* Paint the <pre> wrapper too, so mdBook's padding ring doesn't show the page
+ * theme's background around the code. Scoped to code blocks only. */
+pre:has(> code.hljs) {
+  background: #272822;
+}
+
+/* comments — #75715E */
+.hljs-comment,
+.hljs-quote {
+  color: #75715e;
+  font-style: italic;
+}
+
+/* keywords, storage, operators, and the #import directive — #F92672 */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-meta,
+.hljs-doctag {
+  color: #f92672;
+}
+
+/* strings and chars, incl. <module> inside #import — #E6DB74 */
+.hljs-string,
+.hljs-regexp,
+.hljs-attr,
+.hljs-attribute,
+.hljs-addition {
+  color: #e6db74;
+}
+
+/* numbers and language constants true/false/None — #AE81FF */
+.hljs-number,
+.hljs-literal {
+  color: #ae81ff;
+}
+
+/* built-in and user types — #66D9EF italic */
+.hljs-built_in,
+.hljs-type,
+.hljs-class .hljs-title {
+  color: #66d9ef;
+  font-style: italic;
+}
+
+/* function / method names — #A6E22E */
+.hljs-title,
+.hljs-title.function_,
+.hljs-section,
+.hljs-name {
+  color: #a6e22e;
+}
+
+/* `this`, and intrinsics @... — #FD971F */
+.hljs-variable,
+.hljs-symbol,
+.hljs-params,
+.hljs-template-variable {
+  color: #fd971f;
+}
+.hljs-variable {
+  font-style: italic;
+}
+
+/* invalid — #F44747 */
+.hljs-deletion {
+  color: #f44747;
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: bold;
+}
