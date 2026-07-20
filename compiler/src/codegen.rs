@@ -42,6 +42,16 @@ struct Reach {
     fns: HashSet<String>,
     methods: HashSet<String>, // "Class#method"
     instantiated: HashSet<String>, // classes whose constructor can run
+    intrinsics: HashSet<String>, // @intrinsic names reached (drives runtime blocks)
+}
+
+/// Worklists (drained) plus the intrinsic set (accumulated) during the walk.
+#[derive(Default)]
+struct Work {
+    fns: Vec<String>,
+    methods: Vec<(String, String)>,
+    classes: Vec<String>,
+    intrinsics: HashSet<String>,
 }
 
 fn method_key(class: &str, method: &str) -> String {
@@ -65,181 +75,167 @@ fn compute_reachable(program: &Program, main_takes_argv: bool) -> Reach {
         fns: HashSet::new(),
         methods: HashSet::new(),
         instantiated: HashSet::new(),
+        intrinsics: HashSet::new(),
     };
-    // Worklists of names still to process. `main` is the sole root.
-    let mut fns: Vec<String> = vec!["main".to_string()];
-    let mut methods: Vec<(String, String)> = Vec::new();
-    let mut classes: Vec<String> = Vec::new();
-
+    let mut w = Work::default();
+    w.fns.push("main".to_string()); // the sole root
     // The argv entry point builds an Array<String> directly in the C wrapper.
     if main_takes_argv {
-        classes.push("Array<String>".to_string());
-        methods.push(("Array<String>".to_string(), "set".to_string()));
+        w.classes.push("Array<String>".to_string());
+        w.methods.push(("Array<String>".to_string(), "set".to_string()));
     }
 
     loop {
-        if let Some(name) = fns.pop() {
+        if let Some(name) = w.fns.pop() {
             if !reach.fns.insert(name.clone()) {
                 continue;
             }
             if let Some(f) = fn_by.get(name.as_str()) {
-                walk_block(&f.body, &mut fns, &mut methods, &mut classes);
+                walk_block(&f.body, &mut w);
             }
-        } else if let Some((cls, m)) = methods.pop() {
+        } else if let Some((cls, m)) = w.methods.pop() {
             if !reach.methods.insert(method_key(&cls, &m)) {
                 continue;
             }
             if let Some(md) = method_by.get(&(cls.as_str(), m.as_str())) {
-                walk_block(&md.body, &mut fns, &mut methods, &mut classes);
+                walk_block(&md.body, &mut w);
             }
-        } else if let Some(cls) = classes.pop() {
+        } else if let Some(cls) = w.classes.pop() {
             if !reach.instantiated.insert(cls.clone()) {
                 continue;
             }
             if let Some(c) = class_by.get(cls.as_str()) {
                 // Field defaults run in the constructor, so their calls count.
                 for fld in &c.fields {
-                    walk_expr(&fld.default, &mut fns, &mut methods, &mut classes);
+                    walk_expr(&fld.default, &mut w);
                 }
                 if let Some(ct) = &c.ctor {
-                    walk_block(&ct.body, &mut fns, &mut methods, &mut classes);
+                    walk_block(&ct.body, &mut w);
                 }
             }
         } else {
             break;
         }
     }
+    reach.intrinsics = w.intrinsics;
     reach
 }
 
-fn walk_block(
-    b: &Block,
-    fns: &mut Vec<String>,
-    methods: &mut Vec<(String, String)>,
-    classes: &mut Vec<String>,
-) {
+fn walk_block(b: &Block, w: &mut Work) {
     for s in &b.stmts {
-        walk_stmt(s, fns, methods, classes);
+        walk_stmt(s, w);
     }
 }
 
-fn walk_stmt(
-    s: &Stmt,
-    fns: &mut Vec<String>,
-    methods: &mut Vec<(String, String)>,
-    classes: &mut Vec<String>,
-) {
+fn walk_stmt(s: &Stmt, w: &mut Work) {
     match &s.kind {
-        StmtKind::VarDecl { init, .. } => walk_expr(init, fns, methods, classes),
+        StmtKind::VarDecl { init, .. } => walk_expr(init, w),
         StmtKind::Assign { target, value, .. } => {
-            walk_expr(target, fns, methods, classes);
-            walk_expr(value, fns, methods, classes);
+            walk_expr(target, w);
+            walk_expr(value, w);
         }
-        StmtKind::IncDec { target, .. } => walk_expr(target, fns, methods, classes),
-        StmtKind::ExprStmt(e) => walk_expr(e, fns, methods, classes),
-        StmtKind::Return(Some(e)) => walk_expr(e, fns, methods, classes),
+        StmtKind::IncDec { target, .. } => walk_expr(target, w),
+        StmtKind::ExprStmt(e) => walk_expr(e, w),
+        StmtKind::Return(Some(e)) => walk_expr(e, w),
         StmtKind::Return(None) => {}
         StmtKind::If { arms, else_block } => {
             for (cond, body) in arms {
-                walk_expr(cond, fns, methods, classes);
-                walk_block(body, fns, methods, classes);
+                walk_expr(cond, w);
+                walk_block(body, w);
             }
             if let Some(b) = else_block {
-                walk_block(b, fns, methods, classes);
+                walk_block(b, w);
             }
         }
         StmtKind::While { cond, body } => {
-            walk_expr(cond, fns, methods, classes);
-            walk_block(body, fns, methods, classes);
+            walk_expr(cond, w);
+            walk_block(body, w);
         }
         StmtKind::ForC { init, cond, step, body, .. } => {
-            walk_expr(init, fns, methods, classes);
-            walk_expr(cond, fns, methods, classes);
-            walk_stmt(step, fns, methods, classes);
-            walk_block(body, fns, methods, classes);
+            walk_expr(init, w);
+            walk_expr(cond, w);
+            walk_stmt(step, w);
+            walk_block(body, w);
         }
         StmtKind::ForIn { iterable, body, .. } => {
-            walk_expr(iterable, fns, methods, classes);
-            walk_block(body, fns, methods, classes);
+            walk_expr(iterable, w);
+            walk_block(body, w);
         }
         StmtKind::Break | StmtKind::Continue => {}
-        StmtKind::Scope(b) => walk_block(b, fns, methods, classes),
+        StmtKind::Scope(b) => walk_block(b, w),
         StmtKind::TryCatch { body, catch_body, .. } => {
-            walk_block(body, fns, methods, classes);
-            walk_block(catch_body, fns, methods, classes);
+            walk_block(body, w);
+            walk_block(catch_body, w);
         }
     }
 }
 
-fn walk_expr(
-    e: &Expr,
-    fns: &mut Vec<String>,
-    methods: &mut Vec<(String, String)>,
-    classes: &mut Vec<String>,
-) {
+fn walk_expr(e: &Expr, w: &mut Work) {
     match &e.kind {
         ExprKind::Call { name, args } => {
-            fns.push(name.clone());
+            w.fns.push(name.clone());
             for a in args {
-                walk_expr(a, fns, methods, classes);
+                walk_expr(a, w);
             }
         }
         ExprKind::GenericCall { name, args, .. } => {
-            fns.push(name.clone());
+            w.fns.push(name.clone());
             for a in args {
-                walk_expr(a, fns, methods, classes);
+                walk_expr(a, w);
             }
         }
         ExprKind::MethodCall { recv, args, .. } => {
-            walk_expr(recv, fns, methods, classes);
+            walk_expr(recv, w);
             for a in args {
-                walk_expr(a, fns, methods, classes);
+                walk_expr(a, w);
             }
         }
         ExprKind::CoreMethodCall { class, name, recv, args } => {
-            methods.push((class.clone(), name.clone()));
-            walk_expr(recv, fns, methods, classes);
+            w.methods.push((class.clone(), name.clone()));
+            walk_expr(recv, w);
             for a in args {
-                walk_expr(a, fns, methods, classes);
+                walk_expr(a, w);
             }
         }
         ExprKind::New { class, args } => {
-            classes.push(class.clone());
+            w.classes.push(class.clone());
             for a in args {
-                walk_expr(a, fns, methods, classes);
+                walk_expr(a, w);
             }
         }
         ExprKind::ContainerLit { class, is_array, elems } => {
-            classes.push(class.clone());
-            methods.push((class.clone(), if *is_array { "set" } else { "push" }.to_string()));
+            w.classes.push(class.clone());
+            w.methods
+                .push((class.clone(), if *is_array { "set" } else { "push" }.to_string()));
             for el in elems {
-                walk_expr(el, fns, methods, classes);
+                walk_expr(el, w);
             }
         }
-        ExprKind::BufAlloc { size, .. } => walk_expr(size, fns, methods, classes),
+        ExprKind::BufAlloc { size, .. } => walk_expr(size, w),
         ExprKind::ArrayLit(elems) => {
             for el in elems {
-                walk_expr(el, fns, methods, classes);
+                walk_expr(el, w);
             }
         }
         ExprKind::OptWrap { expr, .. }
         | ExprKind::OptUnwrap { expr, .. }
-        | ExprKind::OptHas { expr, .. } => walk_expr(expr, fns, methods, classes),
-        ExprKind::FieldAccess { recv, .. } => walk_expr(recv, fns, methods, classes),
+        | ExprKind::OptHas { expr, .. } => walk_expr(expr, w),
+        ExprKind::FieldAccess { recv, .. } => walk_expr(recv, w),
         ExprKind::Index { recv, index } => {
-            walk_expr(recv, fns, methods, classes);
-            walk_expr(index, fns, methods, classes);
+            walk_expr(recv, w);
+            walk_expr(index, w);
         }
-        ExprKind::IntrinsicCall { args, .. } => {
+        ExprKind::IntrinsicCall { name, args } => {
+            w.intrinsics.insert(name.clone());
             for a in args {
-                walk_expr(a, fns, methods, classes);
+                walk_expr(a, w);
             }
         }
         ExprKind::Binary { lhs, rhs, .. } => {
-            walk_expr(lhs, fns, methods, classes);
-            walk_expr(rhs, fns, methods, classes);
+            walk_expr(lhs, w);
+            walk_expr(rhs, w);
         }
-        ExprKind::Unary { operand, .. } => walk_expr(operand, fns, methods, classes),
+        ExprKind::Unary { operand, .. } => walk_expr(operand, w),
         ExprKind::Int(_)
         | ExprKind::Float(_)
         | ExprKind::Str(_)
@@ -250,6 +246,64 @@ fn walk_expr(
         | ExprKind::This
         | ExprKind::OptNone { .. } => {}
     }
+}
+
+/// Evaluate the runtime's own conditionals so the emitted source only contains
+/// the kept blocks. The runtime uses exactly two conditional forms:
+/// `#ifdef JIM_RT_<BLOCK>` (a feature block) and `#ifndef JIM_PANIC_ABORT` (the
+/// setjmp machinery); every `#endif` closes one of those. Nesting is handled by
+/// requiring all enclosing conditions to hold.
+fn filter_runtime(src: &str, panic_abort: bool, blocks: &HashSet<&str>) -> String {
+    let mut out = String::with_capacity(src.len());
+    let mut stack: Vec<bool> = Vec::new();
+    for line in src.lines() {
+        let t = line.trim_start();
+        if let Some(rest) = t.strip_prefix("#ifdef ") {
+            let name = rest.split_whitespace().next().unwrap_or("");
+            // Unknown (non JIM_RT_) conditionals keep their content, so an
+            // unrelated future guard is never silently dropped.
+            let active = match name.strip_prefix("JIM_RT_") {
+                Some(b) => blocks.contains(b),
+                None => true,
+            };
+            stack.push(active);
+        } else if let Some(rest) = t.strip_prefix("#ifndef ") {
+            let name = rest.split_whitespace().next().unwrap_or("");
+            let active = if name == "JIM_PANIC_ABORT" { !panic_abort } else { true };
+            stack.push(active);
+        } else if t.starts_with("#endif") {
+            stack.pop();
+        } else if stack.iter().all(|&b| b) {
+            out.push_str(line);
+            out.push('\n');
+        }
+    }
+    out
+}
+
+/// Map an intrinsic to the runtime feature block that defines its `rt_` helper.
+/// `None` means the helper is part of the always-emitted core runtime.
+fn intrinsic_block(name: &str) -> Option<&'static str> {
+    let block = match name {
+        "i64_add" | "i64_sub" | "i64_mul" | "i64_divtrunc" | "i64_mod" | "i64_neg" | "i64_eq"
+        | "i64_lt" | "i64_to_f64" | "i64_to_string" => "INT",
+        "f64_add" | "f64_sub" | "f64_mul" | "f64_div" | "f64_neg" | "f64_eq" | "f64_lt"
+        | "f64_to_i64" | "f64_to_string" => "FLOAT",
+        "f64_sqrt" | "f64_cbrt" | "f64_hypot" | "f64_exp" | "f64_log" | "f64_log2" | "f64_log10"
+        | "f64_sin" | "f64_cos" | "f64_tan" | "f64_asin" | "f64_acos" | "f64_atan" | "f64_atan2"
+        | "f64_fmod" | "f64_pow" | "f64_is_nan" | "f64_is_inf" | "f64_is_finite" => "FLOATMATH",
+        "bool_eq" | "char_eq" | "char_lt" | "char_to_i64" | "i64_to_char" | "char_to_string" => {
+            "BOOLCHAR"
+        }
+        "str_len" | "str_byte" | "str_concat" | "str_eq" | "str_lt" | "str_slice"
+        | "str_from_buf" => "STRING",
+        "str_to_i64" | "str_to_f64" => "STRPARSE",
+        "i64_and" | "i64_or" | "i64_xor" | "i64_not" | "i64_shl" | "i64_shr" => "BITOPS",
+        "print_string" | "print_err" => "IOPRINT",
+        "read_line" | "read_file" | "write_file" | "append_file" | "file_exists" => "IOFILE",
+        _ => return None,
+    };
+    Some(block)
 }
 
 struct Cg {
@@ -282,11 +336,14 @@ impl Cg {
 
         let mut out = String::with_capacity(RUNTIME.len() + 8192);
         out.push_str("/* generated by jimc - do not edit */\n");
-        if self.panic_abort {
-            // Strips the setjmp/longjmp handler machinery from the runtime.
-            out.push_str("#define JIM_PANIC_ABORT 1\n");
-        }
-        out.push_str(RUNTIME);
+        // Keep only the runtime blocks a reachable intrinsic needs, and drop the
+        // setjmp machinery in panic=abort. jimc evaluates the runtime's
+        // `#ifdef JIM_RT_*` / `#ifndef JIM_PANIC_ABORT` itself, so the emitted C
+        // actually shrinks (a bare #ifdef would only hide the text from the C
+        // compiler, not from the source we show).
+        let blocks: HashSet<&str> =
+            reach.intrinsics.iter().filter_map(|i| intrinsic_block(i)).collect();
+        out.push_str(&filter_runtime(RUNTIME, self.panic_abort, &blocks));
 
         // ---- user class layouts ----
         out.push_str("\n/* ==== jim classes ==== */\n\n");

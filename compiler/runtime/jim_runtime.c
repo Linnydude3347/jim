@@ -11,8 +11,12 @@
 #ifndef JIM_PANIC_ABORT
 #include <setjmp.h> /* try/catch unwinding; omitted in panic=abort builds */
 #endif
-#include <math.h>
-#include <errno.h>
+#ifdef JIM_RT_FLOATMATH
+#include <math.h> /* transcendental float intrinsics only */
+#endif
+#ifdef JIM_RT_STRPARSE
+#include <errno.h> /* @str_to_i64 / @str_to_f64 only */
+#endif
 
 typedef struct {
     const char* ptr;
@@ -243,6 +247,7 @@ JIM_DEFINE_OPT(str, jim_str, "String")
     static int64_t jim_buf_##sfx##_capacity(jim_buf_##sfx b) { return b.cap; }
 
 /* ---- Integer (checked 64-bit arithmetic) ---- */
+#ifdef JIM_RT_INT
 
 static int64_t rt_i64_add(int64_t a, int64_t b) {
     int64_t r;
@@ -290,8 +295,10 @@ static jim_str rt_i64_to_string(int64_t v) {
     memcpy(p, buf, (size_t)n);
     return rt_str_lit(p, n);
 }
+#endif /* JIM_RT_INT */
 
 /* ---- Float ---- */
+#ifdef JIM_RT_FLOAT
 
 static double rt_f64_add(double a, double b) { return a + b; }
 static double rt_f64_sub(double a, double b) { return a - b; }
@@ -328,8 +335,10 @@ static jim_str rt_f64_to_string(double v) {
     memcpy(p, buf, (size_t)n);
     return rt_str_lit(p, n);
 }
+#endif /* JIM_RT_FLOAT */
 
 /* ---- Bool / Char (a Char is one byte, 0-255) ---- */
+#ifdef JIM_RT_BOOLCHAR
 
 static bool rt_bool_eq(bool a, bool b) { return a == b; }
 static bool rt_char_eq(uint8_t a, uint8_t b) { return a == b; }
@@ -346,8 +355,10 @@ static jim_str rt_char_to_string(uint8_t c) {
     p[0] = (char)c;
     return rt_str_lit(p, 1);
 }
+#endif /* JIM_RT_BOOLCHAR */
 
 /* ---- String ---- */
+#ifdef JIM_RT_STRING
 
 static int64_t rt_str_len(jim_str s) { return s.len; }
 
@@ -390,7 +401,9 @@ static jim_str rt_str_from_bytes(const uint8_t* p, int64_t len) {
     memcpy(q, p, (size_t)len);
     return rt_str_lit(q, len);
 }
+#endif /* JIM_RT_STRING */
 
+#ifdef JIM_RT_STRPARSE
 /* Strict decimal parse: optional sign, digits, nothing else. None otherwise
  * (including on overflow). */
 static jim_opt_i64 rt_str_to_i64(jim_str s) {
@@ -421,9 +434,11 @@ static jim_opt_f64 rt_str_to_f64(jim_str s) {
     if (errno != 0 || end != buf + s.len) return rt_opt_f64_none();
     return rt_opt_f64_some(v);
 }
+#endif /* JIM_RT_STRPARSE */
 
 /* ---- Float math (libm; IEEE-permissive - domain errors yield nan/inf,
  * policy such as "None for sqrt of a negative" belongs in jim code) ---- */
+#ifdef JIM_RT_FLOATMATH
 
 static double rt_f64_sqrt(double x) { return sqrt(x); }
 static double rt_f64_cbrt(double x) { return cbrt(x); }
@@ -444,8 +459,10 @@ static double rt_f64_pow(double x, double y) { return pow(x, y); }
 static bool rt_f64_is_nan(double x) { return x != x; }
 static bool rt_f64_is_inf(double x) { return isinf(x) != 0; }
 static bool rt_f64_is_finite(double x) { return isfinite(x) != 0; }
+#endif /* JIM_RT_FLOATMATH */
 
 /* ---- Integer bit operations ---- */
+#ifdef JIM_RT_BITOPS
 
 static int64_t rt_i64_and(int64_t a, int64_t b) { return a & b; }
 static int64_t rt_i64_or(int64_t a, int64_t b) { return a | b; }
@@ -461,8 +478,10 @@ static int64_t rt_i64_shr(int64_t a, int64_t b) {
     if (b < 0 || b > 63) rt_panic_cstr("shift amount out of range (0-63)");
     return a >> b; /* arithmetic: the sign is preserved */
 }
+#endif /* JIM_RT_BITOPS */
 
 /* ---- io ---- */
+#ifdef JIM_RT_IOPRINT
 
 static void rt_print_string(jim_str s) {
     fwrite(s.ptr, 1, (size_t)s.len, stdout);
@@ -473,7 +492,9 @@ static void rt_print_err(jim_str s) {
     fwrite(s.ptr, 1, (size_t)s.len, stderr);
     fputc('\n', stderr);
 }
+#endif /* JIM_RT_IOPRINT */
 
+#ifdef JIM_RT_IOFILE
 /* file paths need NUL termination for the C library */
 static char* rt_cstr(jim_str s) {
     char* p = (char*)rt_arena_alloc((size_t)s.len + 1);
@@ -547,3 +568,4 @@ static bool rt_file_exists(jim_str path) {
     }
     return false;
 }
+#endif /* JIM_RT_IOFILE */

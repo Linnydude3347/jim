@@ -114,26 +114,24 @@ fn panic_abort_mode_strips_setjmp() {
         .to_string(),
     );
 
-    // Normal codegen emits the setjmp handler for try/catch.
+    // Normal codegen emits the setjmp handler for try/catch, and jimc keeps the
+    // setjmp machinery in the runtime it emits.
     let normal =
         compile_to_c("main.j", files.clone(), Some("std".to_string()), false, false, false)
             .expect("normal compile");
+    assert!(normal.contains("setjmp(jim_h"), "normal build should emit a setjmp handler");
     assert!(
-        normal.contains("setjmp(jim_h") && normal.contains("rt_handler jim_h"),
-        "normal build should emit a setjmp handler for try/catch"
+        normal.contains("jmp_buf") && normal.contains("rt_handler"),
+        "normal build keeps the setjmp runtime"
     );
-    assert!(!normal.contains("#define JIM_PANIC_ABORT"), "normal build sets no abort define");
 
-    // Abort mode: the define activates the runtime guards, and codegen emits NO
-    // setjmp call / handler for try/catch (the runtime's guarded text remains,
-    // but the C preprocessor strips it when JIM_PANIC_ABORT is defined).
+    // Abort mode: jimc filters the runtime and codegen omits the handler, so no
+    // setjmp construct survives at all (only comments may mention the word).
     let abort = compile_to_c("main.j", files, Some("std".to_string()), false, false, true)
         .expect("panic=abort compile");
-    assert!(abort.contains("#define JIM_PANIC_ABORT 1"), "abort build sets the define");
-    assert!(
-        !abort.contains("setjmp(jim_h") && !abort.contains("rt_handler jim_h"),
-        "panic=abort build must not emit a setjmp handler"
-    );
+    for bad in ["#include <setjmp.h>", "jmp_buf", "setjmp(", "longjmp(", "rt_handler"] {
+        assert!(!abort.contains(bad), "panic=abort build must not contain `{bad}`");
+    }
 }
 
 #[test]
