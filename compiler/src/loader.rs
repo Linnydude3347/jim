@@ -15,7 +15,7 @@ pub trait Loader {
     fn std_root(&self) -> Option<String>;
     /// Does a file exist at this (not-yet-canonical) path?
     fn exists(&self, path: &str) -> bool;
-    /// Canonical identity key for a path — also the key [`read`](Loader::read)
+    /// Canonical identity key for a path - also the key [`read`](Loader::read)
     /// expects. Two paths naming the same file must share a key (so imports are
     /// idempotent). Errors if the file cannot be resolved.
     fn canonical(&self, path: &str) -> Result<String, String>;
@@ -185,7 +185,7 @@ mod fs_loader {
         }
         fn display_name(&self, canonical: &str) -> String {
             // Panic locations read better as "std/core/array.j" than an absolute
-            // path — strip the working directory when the file is under it.
+            // path - strip the working directory when the file is under it.
             let p = nice_path(Path::new(canonical));
             match &self.cwd {
                 Some(c) => p.strip_prefix(c).unwrap_or(&p).to_string_lossy().into_owned(),
@@ -194,7 +194,7 @@ mod fs_loader {
         }
     }
 
-    /// Strip Windows' verbatim prefix (`\\?\C:\...`) that `canonicalize` adds —
+    /// Strip Windows' verbatim prefix (`\\?\C:\...`) that `canonicalize` adds -
     /// it's noise in diagnostics and breaks tidy `starts_with` comparisons.
     fn nice_path(p: &Path) -> PathBuf {
         let s = p.to_string_lossy();

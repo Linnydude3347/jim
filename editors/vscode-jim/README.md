@@ -16,7 +16,7 @@ Syntax highlighting, a "J" file icon, a Monokai-style color theme
   `@intrinsic` (and `,` between arguments) pops up its parameter list with the
   current argument highlighted, plus the docstring.
 - **Hover docs**: hovering a function, class, method, field, or `@intrinsic`
-  shows its signature — plus its **docstring**: any block of `//` comments
+  shows its signature - plus its **docstring**: any block of `//` comments
   directly above a declaration becomes its hover documentation. Document
   your std that way and it shows up everywhere.
 
@@ -28,14 +28,14 @@ public area() -> Integer { ... }
 
 Completions are declaration-based (a lexical scan), not type-inferred: after
 `.` you're offered all known public members, not just the receiver's. The
-diagnostics, however, are the real compiler — exact errors, one at a time.
+diagnostics, however, are the real compiler - exact errors, one at a time.
 
 The file icon is a per-language icon: the built-in Seti and Minimal icon
 themes show it automatically for `.j` files (they have no icon of their own).
 Third-party icon themes may override it with their generic icon.
 
 The grammar uses standard TextMate scopes, so `.j` files highlight correctly
-under **any** theme — including VS Code's built-in Monokai. The bundled
+under **any** theme - including VS Code's built-in Monokai. The bundled
 "Jim Monokai" theme adds jim-specific touches (intrinsics in orange, `this`
 italic orange).
 
@@ -48,14 +48,14 @@ Copy-Item -Recurse editors\vscode-jim "$env:USERPROFILE\.vscode\extensions\jim-l
 ```
 
 Then reload VS Code (`Developer: Reload Window`). `.j` files are recognized
-automatically. To use the theme: `Ctrl+K Ctrl+T` → "Jim Monokai".
+automatically. To use the theme: `Ctrl+K Ctrl+T` -> "Jim Monokai".
 
 ## What gets highlighted
 
-- keywords (`if while for return try catch ...`), declarations (`var const function class public private`) — Monokai pink
-- word operators (`and or not div`) and symbols (`-> == += ...`) — pink
-- types (`Integer`, `Vector`, user classes) — cyan italic; class declarations green underline
-- function/method names and calls — green
-- strings/chars — yellow; escapes, numbers, `true`/`false`/`None` — purple
-- `this` and `@intrinsics` — orange
-- comments — gray
+- keywords (`if while for return try catch ...`), declarations (`var const function class public private`) - Monokai pink
+- word operators (`and or not div`) and symbols (`-> == += ...`) - pink
+- types (`Integer`, `Vector`, user classes) - cyan italic; class declarations green underline
+- function/method names and calls - green
+- strings/chars - yellow; escapes, numbers, `true`/`false`/`None` - purple
+- `this` and `@intrinsics` - orange
+- comments - gray

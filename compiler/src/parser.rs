@@ -93,7 +93,7 @@ impl Parser {
                 TokenKind::KwClass => classes.push(self.parse_class(file_idx, from_std)?),
                 TokenKind::KwTry => {
                     return Err(self.err_here(
-                        "try/catch is a statement — put it inside a function",
+                        "try/catch is a statement - put it inside a function",
                     ))
                 }
                 _ => {
@@ -279,7 +279,7 @@ impl Parser {
     fn parse_function(&mut self, file_idx: usize, from_std: bool) -> JResult<FunctionDecl> {
         let kw = self.expect(&TokenKind::KwFunction, "'function'")?;
         let (name, _, _) = self.expect_ident("a function name")?;
-        // `function max<C, T>(...)` — generic type parameters
+        // `function max<C, T>(...)` - generic type parameters
         let mut type_params = Vec::new();
         if self.eat(&TokenKind::Lt) {
             loop {
@@ -455,7 +455,7 @@ impl Parser {
         }
     }
 
-    /// Assignment, ++/--, or a bare expression — without the trailing ';'
+    /// Assignment, ++/--, or a bare expression - without the trailing ';'
     /// (shared between normal statements and the step slot of a C-style for).
     fn parse_simple_stmt(&mut self) -> JResult<Stmt> {
         let t = self.peek().clone();
@@ -808,9 +808,9 @@ impl Parser {
             }
             TokenKind::Ident(name) => {
                 self.bump();
-                // `max<Vector<Float>, Float>(v)` — explicit generic arguments.
+                // `max<Vector<Float>, Float>(v)` - explicit generic arguments.
                 // Tentative: commits only when `<types>` parses cleanly AND is
-                // followed by '(' — otherwise '<' stays a comparison.
+                // followed by '(' - otherwise '<' stays a comparison.
                 if self.check(&TokenKind::Lt) {
                     if let Some(type_args) = self.try_parse_type_args() {
                         let args = self.parse_call_args()?;

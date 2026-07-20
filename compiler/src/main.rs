@@ -2,7 +2,7 @@ use jimc::driver;
 use std::path::PathBuf;
 
 const USAGE: &str = "\
-jimc — compiler for the jim programming language
+jimc - compiler for the jim programming language
 
 USAGE:
     jimc build <file.j> [options]     compile to a native executable
@@ -19,7 +19,7 @@ OPTIONS:
     --debug              panics print full jim stack traces (default for `run`)
     --release            no panic traces, zero tracing overhead (default for `build`)
     --panic-abort        panics print + exit (no try/catch); emits C without
-                         setjmp — for toolchains lacking wasm setjmp
+                         setjmp - for toolchains lacking wasm setjmp
     -h, --help           show this help
     --version            show version
 ";

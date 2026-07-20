@@ -24,13 +24,13 @@ pub struct Options {
     /// `jimc run` defaults to true (the dev loop), `jimc build` to false.
     pub debug: bool,
     /// Panics print + exit instead of setjmp/longjmp unwinding (no try/catch
-    /// handling). Produces C with no setjmp — for toolchains where wasm
+    /// handling). Produces C with no setjmp - for toolchains where wasm
     /// setjmp isn't available (the browser playground's run path).
     pub panic_abort: bool,
 }
 
 /// Load the entry file plus everything it (transitively) imports, merged into
-/// one Program, plus each file's display name (indexed by file_idx — codegen
+/// one Program, plus each file's display name (indexed by file_idx - codegen
 /// bakes these into @panic locations). Reads exclusively through `loader`, so
 /// the same resolution + type-checking serves both the CLI (filesystem) and
 /// embedders like the wasm playground (an in-memory map). Errors come back
@@ -150,7 +150,7 @@ fn load_program<L: Loader>(
     Ok((lowered, file_names))
 }
 
-/// Compile jim source to C11 entirely in memory — no filesystem, no C compiler.
+/// Compile jim source to C11 entirely in memory - no filesystem, no C compiler.
 /// `files` maps virtual paths (forward-slashed) to source text; `entry` names
 /// the program's main file within that map; `std_root` is the virtual std
 /// directory (e.g. `"std"`). Returns the generated C, or a rendered diagnostic.
@@ -308,7 +308,7 @@ pub fn build(opts: &Options) -> Result<PathBuf, String> {
         .map_err(|e| format!("jimc: failed to run C compiler '{}': {}", cc[0], e))?;
     if !output.status.success() {
         return Err(format!(
-            "jimc: internal error — generated C failed to compile (this is a jimc bug).\nGenerated file kept at: {}\n{}",
+            "jimc: internal error - generated C failed to compile (this is a jimc bug).\nGenerated file kept at: {}\n{}",
             gen_path.display(),
             String::from_utf8_lossy(&output.stderr)
         ));

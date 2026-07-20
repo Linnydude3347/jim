@@ -1,8 +1,8 @@
-﻿//! Type checking + lowering.
+//! Type checking + lowering.
 //!
 //! This pass consumes the parsed AST and returns a *lowered* AST in which
 //! every operator has been desugared into a resolved method call
-//! (`ExprKind::CoreMethodCall`) per the contract in docs/DESIGN.md Â§3.
+//! (`ExprKind::CoreMethodCall`) per the contract in docs/DESIGN.md section 3.
 //! `and`/`or`/`not` stay native (short-circuit). Codegen only ever sees
 //! lowered trees.
 
@@ -37,7 +37,7 @@ struct FieldInfo {
 
 #[derive(Clone, PartialEq)]
 enum ClassKind {
-    /// Integer/Float/Bool/Char/String â€” value classes, methods only.
+    /// Integer/Float/Bool/Char/String - value classes, methods only.
     CoreValue,
     /// A user reference class (arena-allocated).
     UserRef,
@@ -59,7 +59,7 @@ struct FnInst {
     template: String,
     /// (type parameter, concrete argument) in declared order.
     bindings: Vec<(String, Type)>,
-    /// Instance key, e.g. "max<Vector<Float>,Float>" — becomes the emitted name.
+    /// Instance key, e.g. "max<Vector<Float>,Float>" - becomes the emitted name.
     key: String,
 }
 
@@ -78,7 +78,7 @@ struct Tables {
     allow_intrinsics: bool,
 }
 
-/// Why a core call is being made â€” shapes the error messages.
+/// Why a core call is being made - shapes the error messages.
 enum Origin {
     /// e.g. "operator '+'", "operator '++'", "unary '-'",
     /// "mixed Integer/Float arithmetic"
@@ -136,7 +136,7 @@ struct FnCtx<'t> {
     this_ty: Option<Type>,
     env: Env,
     loop_depth: u32,
-    /// loop_depth captured at each enclosing `try` â€” control flow may not
+    /// loop_depth captured at each enclosing `try` - control flow may not
     /// leave a try block (the handler stack must unwind cleanly).
     try_marks: Vec<u32>,
 }
@@ -148,7 +148,7 @@ pub fn check(
 ) -> Result<Program, SemaError> {
     // ---- collect function signatures (no overloading) ----
     // Generic functions (type_params non-empty) are templates: they get no
-    // FuncSig — each call monomorphizes an instance instead.
+    // FuncSig - each call monomorphizes an instance instead.
     let mut funcs: HashMap<String, FuncSig> = HashMap::new();
     let mut fn_templates: HashMap<String, FunctionDecl> = HashMap::new();
     for f in &program.functions {
@@ -186,7 +186,7 @@ pub fn check(
             Err(SemaError { file_idx: c.file_idx, err: JimError::new(msg, c.line, c.col) })
         };
         if c.type_param.is_some() {
-            // a generic template â€” expanded per instantiation, never emitted itself
+            // a generic template - expanded per instantiation, never emitted itself
             if !matches!(c.name.as_str(), "Array" | "Vector") {
                 return fail(
                     "user generic classes are not supported (only the std Array<T>/Vector<T>)"
@@ -227,7 +227,7 @@ pub fn check(
                 }
                 if !c.fields.is_empty() {
                     return fail(format!(
-                        "core class '{}' is a value class â€” methods only, no fields",
+                        "core class '{}' is a value class - methods only, no fields",
                         c.name
                     ));
                 }
@@ -243,7 +243,7 @@ pub fn check(
                 ))
             }
             "RawBuffer" => return fail("'RawBuffer' is provided by the compiler".to_string()),
-            _ => {} // user-defined class â€” allowed anywhere
+            _ => {} // user-defined class - allowed anywhere
         }
         if classes.contains_key(&c.name) {
             return fail(format!("duplicate class '{}'", c.name));
@@ -297,7 +297,7 @@ pub fn check(
         classes.insert(c.name.clone(), ClassInfo { methods, fields, ctor_params, kind });
     }
 
-    // function names and class names share the call syntax â€” no collisions
+    // function names and class names share the call syntax - no collisions
     for f in &program.functions {
         if classes.contains_key(&f.name) || templates.contains_key(&f.name) {
             return Err(SemaError {
@@ -378,7 +378,7 @@ pub fn check(
         }
     }
     // Explicit generic-call type arguments (`max<Vector<Float>, Float>(v)`)
-    // can mention container types written nowhere else — keep only the ones
+    // can mention container types written nowhere else - keep only the ones
     // that are fully concrete (sema reports unknown names at the call site).
     mentioned.retain(|ty| type_is_concrete(ty, &classes, &templates));
     let mut mono: Vec<(ClassDecl, Type)> = Vec::new();
@@ -386,7 +386,7 @@ pub fn check(
         ensure_instantiated(ty, &mut classes, &mut mono, &templates, 0)
             .map_err(|msg| SemaError { file_idx: 0, err: JimError::new(msg, 1, 1) })?;
     }
-    // Templates are only checked when expanded — probe-instantiate any that
+    // Templates are only checked when expanded - probe-instantiate any that
     // nothing mentions yet, so `jimc check core.j` validates their bodies.
     let template_names: Vec<String> = templates.keys().cloned().collect();
     for name in template_names {
@@ -569,7 +569,7 @@ fn check_template_type(
         Type::Generic(n, p) => match n.as_str() {
             "Array" | "Vector" | "RawBuffer" => check_template_type(p, tparams, classes),
             other => Err(format!(
-                "'{}' is not a generic type — only Array<T> and Vector<T> exist",
+                "'{}' is not a generic type - only Array<T> and Vector<T> exist",
                 other
             )),
         },
@@ -670,7 +670,7 @@ fn ensure_instantiated(
                     Ok(())
                 }
                 other => Err(format!(
-                    "'{}' is not a generic type â€” only Array<T> and Vector<T> exist",
+                    "'{}' is not a generic type - only Array<T> and Vector<T> exist",
                     other
                 )),
             }
@@ -937,7 +937,7 @@ fn type_available(tables: &Tables, ty: &Type, is_return: bool) -> Result<(), Str
                 }
             }
             other => Err(format!(
-                "'{}' is not a generic type â€” only Array<T> and Vector<T> exist",
+                "'{}' is not a generic type - only Array<T> and Vector<T> exist",
                 other
             )),
         },
@@ -973,7 +973,7 @@ fn class_key(ty: &Type) -> Option<String> {
     }
 }
 
-/// For `T?`, the payload T â€” when T has an optional representation
+/// For `T?`, the payload T - when T has an optional representation
 /// (core values, classes, containers, pointers).
 fn opt_payload(ty: &Type) -> Option<Type> {
     match ty {
@@ -1008,7 +1008,7 @@ fn deopt(pair: (Expr, Type)) -> (Expr, Type) {
 }
 
 /// jim's optional coercions: exact match, `T -> T?` (wrap, always safe),
-/// or `T? -> T` (unwrap, runtime-checked). Anything else is a type error â€”
+/// or `T? -> T` (unwrap, runtime-checked). Anything else is a type error -
 /// the pair comes back so the caller can build its own message.
 fn try_coerce(pair: (Expr, Type), want: &Type) -> Result<Expr, (Expr, Type)> {
     if &pair.1 == want {
@@ -1032,7 +1032,7 @@ fn try_coerce(pair: (Expr, Type), want: &Type) -> Result<Expr, (Expr, Type)> {
 }
 
 /// Does this type contain a pointer anywhere? (Pointers must not outlive the
-/// variable they point at â€” so they cannot be returned, stored in fields, or
+/// variable they point at - so they cannot be returned, stored in fields, or
 /// put in containers.)
 fn contains_pointer(ty: &Type) -> bool {
     match ty {
@@ -1244,7 +1244,7 @@ fn unify(
     }
 }
 
-/// Best-effort unification against the *expected* type at the call site —
+/// Best-effort unification against the *expected* type at the call site -
 /// fills unbound parameters, never overwrites, never fails (the final
 /// coercion check reports any real mismatch). `T` unifying with a `T?`
 /// context looks through the optional (T -> T? wrapping is a coercion).
@@ -1553,7 +1553,7 @@ impl<'t> FnCtx<'t> {
                                 StmtKind::ExprStmt(call)
                             }
                             (AssignOp::Set, _) => {
-                                // no usable `set` â€” let core_call report it nicely
+                                // no usable `set` - let core_call report it nicely
                                 let value_pair = self.lower_expr(value)?;
                                 let (call, _) = self.core_call(
                                     &recv_l.1.clone(),
@@ -1741,7 +1741,7 @@ impl<'t> FnCtx<'t> {
                 }
             }
             StmtKind::IncDec { target, inc } => {
-                // `x++` is exactly `x += 1` â€” reuse that path (variables,
+                // `x++` is exactly `x += 1` - reuse that path (variables,
                 // fields, and indexes all work uniformly).
                 let one = Expr { kind: ExprKind::Int(1), line, col };
                 let op = if *inc { AssignOp::Add } else { AssignOp::Sub };
@@ -1759,7 +1759,7 @@ impl<'t> FnCtx<'t> {
             StmtKind::Return(value) => match value {
                 _ if !self.try_marks.is_empty() => {
                     return Err(JimError::new(
-                        "'return' inside a try block is not supported yet (the handler must unwind first — milestone 9)",
+                        "'return' inside a try block is not supported yet (the handler must unwind first - milestone 9)",
                         line,
                         col,
                     ))
@@ -2179,7 +2179,7 @@ impl<'t> FnCtx<'t> {
                 }
             }
         }
-        // `Array(10)` / `Vector()` — generic construction takes its type
+        // `Array(10)` / `Vector()` - generic construction takes its type
         // argument from context, exactly like literals do.
         if let ExprKind::Call { name, args } = &e.kind {
             if let Type::Generic(base, _) = want {
@@ -2231,7 +2231,7 @@ impl<'t> FnCtx<'t> {
             if name == "buf_alloc" {
                 if !self.from_std && !self.tables.allow_intrinsics {
                     return Err(JimError::new(
-                        "'@buf_alloc' â€” intrinsics are only allowed in the standard library (or with --allow-intrinsics)",
+                        "'@buf_alloc' - intrinsics are only allowed in the standard library (or with --allow-intrinsics)",
                         e.line,
                         e.col,
                     ));
@@ -2308,7 +2308,7 @@ impl<'t> FnCtx<'t> {
                         .map_or(false, |info| info.fields.contains_key(name));
                     let msg = if is_field {
                         format!(
-                            "unknown variable '{}' â€” member access must be written 'this.{}'",
+                            "unknown variable '{}' - member access must be written 'this.{}'",
                             name, name
                         )
                     } else {
@@ -2331,7 +2331,7 @@ impl<'t> FnCtx<'t> {
                 col,
             )),
             ExprKind::Call { name, args } => {
-                // `Shape(1, 2)` â€” a call whose name is a class is instantiation
+                // `Shape(1, 2)` - a call whose name is a class is instantiation
                 if let Some(info) = self.tables.classes.get(name) {
                     if info.kind == ClassKind::CoreValue {
                         return Err(JimError::new(
@@ -2371,14 +2371,14 @@ impl<'t> FnCtx<'t> {
                 if matches!(name.as_str(), "Array" | "Vector") && !self.tables.funcs.contains_key(name) {
                     return Err(JimError::new(
                         format!(
-                            "{}(...) is generic — construction takes its type from context, e.g. 'var a: {}<Integer> = {}(...);'",
+                            "{}(...) is generic - construction takes its type from context, e.g. 'var a: {}<Integer> = {}(...);'",
                             name, name, name
                         ),
                         line,
                         col,
                     ));
                 }
-                // a call to a generic function with no expected type — infer
+                // a call to a generic function with no expected type - infer
                 // the type parameters from the arguments alone
                 if self.tables.fn_templates.contains_key(name) {
                     return self.lower_generic_call(name, None, args, None, line, col);
@@ -2426,7 +2426,7 @@ impl<'t> FnCtx<'t> {
                 if !self.from_std && !self.tables.allow_intrinsics {
                     return Err(JimError::new(
                         format!(
-                            "'@{}' â€” intrinsics are only allowed in the standard library (or with --allow-intrinsics)",
+                            "'@{}' - intrinsics are only allowed in the standard library (or with --allow-intrinsics)",
                             name
                         ),
                         line,
@@ -2501,19 +2501,19 @@ impl<'t> FnCtx<'t> {
                 }
                 let msg = if self.tables.funcs.contains_key(name) {
                     format!(
-                        "function '{}' is not generic — remove the explicit type arguments",
+                        "function '{}' is not generic - remove the explicit type arguments",
                         name
                     )
                 } else if self.tables.classes.contains_key(name)
                     || self.tables.templates.contains_key(name)
                 {
                     format!(
-                        "constructors take their type from context ('var v: {0}<Integer> = {0}(...);') — explicit type arguments are for generic functions",
+                        "constructors take their type from context ('var v: {0}<Integer> = {0}(...);') - explicit type arguments are for generic functions",
                         name
                     )
                 } else if self.env.lookup(name).is_some() {
                     format!(
-                        "'{}' is a variable, not a generic function — if you meant comparisons, parenthesize them: '(a < b), (c > d)'",
+                        "'{}' is a variable, not a generic function - if you meant comparisons, parenthesize them: '(a < b), (c > d)'",
                         name
                     )
                 } else {
@@ -2700,7 +2700,7 @@ impl<'t> FnCtx<'t> {
                     None => {
                         return Err(JimError::new(
                             format!(
-                                "only optional values (T?) can be compared with None â€” this is {}",
+                                "only optional values (T?) can be compared with None - this is {}",
                                 vt.display()
                             ),
                             v.line,
@@ -2863,7 +2863,7 @@ impl<'t> FnCtx<'t> {
                         label, class, method, class
                     ),
                     Origin::Plain => format!(
-                        "type {} has no method '{}' (class '{}' is not defined â€” is core.j loaded?)",
+                        "type {} has no method '{}' (class '{}' is not defined - is core.j loaded?)",
                         class, method, class
                     ),
                 };
@@ -3041,7 +3041,7 @@ impl<'t> FnCtx<'t> {
         if !missing.is_empty() {
             return Err(JimError::new(
                 format!(
-                    "cannot infer type parameter{} {} of '{}' — annotate the target ('var x: Type = {}(...);') or pass explicit type arguments ('{}<...>(...)') ",
+                    "cannot infer type parameter{} {} of '{}' - annotate the target ('var x: Type = {}(...);') or pass explicit type arguments ('{}<...>(...)') ",
                     if missing.len() == 1 { "" } else { "s" },
                     missing.join(", "),
                     name,
@@ -3116,7 +3116,7 @@ impl<'t> FnCtx<'t> {
     }
 }
 
-/// The v0 intrinsic table â€” see docs/DESIGN.md Â§6. Grows on demand.
+/// The v0 intrinsic table - see docs/DESIGN.md section 6. Grows on demand.
 fn intrinsic_sig(name: &str) -> Option<(Vec<Type>, Type)> {
     let int = || Type::named("Integer");
     let float = || Type::named("Float");
@@ -3155,7 +3155,7 @@ fn intrinsic_sig(name: &str) -> Option<(Vec<Type>, Type)> {
         }
         "str_to_i64" => (vec![string()], opt(int())),
         "str_to_f64" => (vec![string()], opt(float())),
-        // Float math (libm; IEEE-permissive — domain errors yield nan/inf)
+        // Float math (libm; IEEE-permissive - domain errors yield nan/inf)
         "f64_sqrt" | "f64_cbrt" | "f64_exp" | "f64_log" | "f64_log2" | "f64_log10"
         | "f64_sin" | "f64_cos" | "f64_tan" | "f64_asin" | "f64_acos" | "f64_atan" => {
             (vec![float()], float())

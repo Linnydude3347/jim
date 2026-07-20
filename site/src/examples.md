@@ -1,9 +1,9 @@
 # Examples
 
-Complete, runnable programs. Try any of them live in the
-[Playground](playground.md), or from the repository root:
+Complete, runnable programs. Try any of them in the [Playground](playground.md),
+or from the repository root:
 
-```powershell
+```
 jimc run example.j
 jimc run example.j --emit-c out.c   # inspect the generated C
 ```
@@ -21,8 +21,8 @@ function main() -> Integer {
 
 ## Operators on your own type
 
-Reserved method names give your class real operators — `plus` backs `+`,
-`equals` backs `==`/`!=`, and so on:
+Reserved method names give your class real operators. `plus` backs `+`, `equals`
+backs `==` and `!=`, and so on:
 
 ```jim
 #import <io>
@@ -60,8 +60,8 @@ function main() -> Integer {
 
 ## Custom iterables
 
-`for..in` works on **any** class with `length() -> Integer` and
-`get(i: Integer) -> T` — not just the built-in containers:
+`for..in` works on any class with `length() -> Integer` and
+`get(i: Integer) -> T`, not just the built-in containers:
 
 ```jim
 #import <io>
@@ -105,8 +105,8 @@ function main() -> Integer {
 }
 ```
 
-Everything that panics is catchable — `None` misuse, division by zero, integer
-overflow, out-of-bounds, and anything the std library raises with `@panic`.
+Everything that panics is catchable: None misuse, division by zero, integer
+overflow, out of bounds, and anything the std library raises.
 
 ## FizzBuzz
 
@@ -137,7 +137,7 @@ function main() -> Integer {
 
 ## Prime sieve
 
-Sized arrays, vectors, nested loops, a `+=` step in a for-loop:
+Sized arrays, vectors, nested loops, and a `+=` step in a for loop:
 
 ```jim
 #import <io>
@@ -198,12 +198,12 @@ function main() -> Integer {
 ```
 
 The standard library ships `max`, `min`, and `sum` as generic functions built
-exactly like this — so `max(a)` works out of the box.
+exactly like this, so `max(a)` works out of the box.
 
 ## Reading the compiler's errors
 
-`jimc` reports one error at a time, with the file, position, offending line,
-and a caret. A tour of common ones:
+`jimc` reports one error at a time, with the file, position, offending line, and
+a caret. A tour of common ones:
 
 | you wrote | the compiler says |
 |---|---|
@@ -212,7 +212,7 @@ and a caret. A tour of common ones:
 | `day = 2;` on a const | cannot assign to constant `'day'` |
 | a path with no `return` | function `'f'` may reach the end without returning Integer |
 | `var x: Integer = None;` | `'None'` only fits optional types (T?), but Integer is expected |
-| `width` instead of `this.width` | unknown variable `'width'` — member access must be `'this.width'` |
+| `width` instead of `this.width` | unknown variable `'width'`: member access must be `'this.width'` |
 | `break;` outside a loop | `'break'` outside a loop |
-| `@panic("x")` outside std | `'@panic'` — intrinsics are only allowed in the standard library |
+| `@panic("x")` outside std | `'@panic'`: intrinsics are only allowed in the standard library |
 | `+` on a class without `plus` | operator `'+'` needs `Shape.plus()`, but class `'Shape'` has no method `'plus'` |

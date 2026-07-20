@@ -1,7 +1,7 @@
 [book]
 title = "The jim Programming Language"
 authors = ["Ben Antonellis"]
-description = "jim — a small, explicit language whose operators desugar to method calls and which transpiles to a single C11 file."
+description = "jim - a small, explicit language whose operators desugar to method calls and which transpiles to a single C11 file."
 language = "en"
 src = "src"
 

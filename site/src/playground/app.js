@@ -2,7 +2,7 @@
 //
 // `jim-playground` is jimc compiled to WebAssembly (see playground/wasm). Its
 // `compile(source)` runs the real compiler front-end against the real standard
-// library and returns the generated C — or a rendered diagnostic.
+// library and returns the generated C - or a rendered diagnostic.
 import init, { compile, compile_run, version } from "./pkg/jim_playground.js";
 
 // A menu of ready-to-run programs. Keys match the <option> values in index.html.
@@ -267,11 +267,11 @@ async function ensureToolchain() {
   if (clang) return;
   if (!window.crossOriginIsolated) {
     throw new Error(
-      "This embedded preview can't run programs — execution needs cross-origin " +
+      "This embedded preview can't run programs - execution needs cross-origin " +
         "isolation. Open the playground full-screen (link on the Playground page) to run."
     );
   }
-  setRunStatus("loading C toolchain (~30 MB, one time)…");
+  setRunStatus("loading C toolchain (~30 MB, one time)...");
   wasmer = await import("https://unpkg.com/@wasmer/sdk@0.8.0-beta.1/dist/index.mjs");
   await wasmer.init();
   clang = await wasmer.Wasmer.fromRegistry("clang/clang");
@@ -291,7 +291,7 @@ async function runProgram() {
     }
     // 2. C -> wasm via Wasmer's clang.
     await ensureToolchain();
-    setRunStatus("compiling to wasm…");
+    setRunStatus("compiling to wasm...");
     const project = new wasmer.Directory();
     await project.writeFile("prog.c", compiled.c);
     const cc = await clang.entrypoint.run({
@@ -305,7 +305,7 @@ async function runProgram() {
       return;
     }
     // 3. Run the produced module and capture stdout.
-    setRunStatus("running…");
+    setRunStatus("running...");
     const bytes = await project.readFile("prog.wasm");
     const mod = await wasmer.Wasmer.fromFile(bytes);
     const res = await mod.entrypoint.run();
@@ -338,7 +338,7 @@ init()
   .then(() => {
     ready = true;
     runBtn.disabled = false;
-    document.getElementById("version").textContent = "· wasm v" + version();
+    document.getElementById("version").textContent = "wasm v" + version();
     setStatus("ready", "ok");
     doCompile();
   })

@@ -23,9 +23,9 @@ impl Type {
 
 #[derive(Debug, Clone)]
 pub enum ImportKind {
-    /// `#import <name>` — resolved against the std root
+    /// `#import <name>` - resolved against the std root
     Std(String),
-    /// `#import "path.j"` — resolved relative to the importing file
+    /// `#import "path.j"` - resolved relative to the importing file
     Local(String),
 }
 
@@ -47,7 +47,7 @@ pub struct Param {
 #[derive(Debug, Clone)]
 pub struct FunctionDecl {
     pub name: String,
-    /// `function max<C, T>(...)` — generic type parameters. Empty for normal
+    /// `function max<C, T>(...)` - generic type parameters. Empty for normal
     /// functions. Generic functions are templates: monomorphized per call.
     pub type_params: Vec<String>,
     pub params: Vec<Param>,
@@ -55,7 +55,7 @@ pub struct FunctionDecl {
     pub body: Block,
     /// Index into the driver's source-file table (for error rendering).
     pub file_idx: usize,
-    /// True when this function came from a file under the std root —
+    /// True when this function came from a file under the std root -
     /// the only place `@intrinsic` calls are allowed.
     pub from_std: bool,
     pub line: u32,
@@ -78,7 +78,7 @@ pub struct FieldDecl {
     pub is_public: bool,
     pub name: String,
     pub ty: Type,
-    /// Field defaults are mandatory — every instance starts fully initialized.
+    /// Field defaults are mandatory - every instance starts fully initialized.
     pub default: Expr,
     pub line: u32,
     pub col: u32,
@@ -96,7 +96,7 @@ pub struct CtorDecl {
 #[derive(Debug, Clone)]
 pub struct ClassDecl {
     pub name: String,
-    /// `class Vector<T>` — the single type parameter (std Array/Vector only).
+    /// `class Vector<T>` - the single type parameter (std Array/Vector only).
     pub type_param: Option<String>,
     pub fields: Vec<FieldDecl>,
     /// At most one (no overloading); None means the auto-generated default.
@@ -150,7 +150,7 @@ pub enum AssignOp {
 pub enum StmtKind {
     VarDecl { is_const: bool, name: String, ty: Type, init: Expr },
     Assign { target: Expr, op: AssignOp, value: Expr },
-    /// `x++;` / `x--;` — statements only, by design.
+    /// `x++;` / `x--;` - statements only, by design.
     IncDec { target: Expr, inc: bool },
     ExprStmt(Expr),
     Return(Option<Expr>),
@@ -161,7 +161,7 @@ pub enum StmtKind {
     ForIn { var_name: String, var_ty: Type, iterable: Expr, body: Block },
     Break,
     Continue,
-    /// A bare `{ ... }` scope — produced by sema (for..in desugaring), never
+    /// A bare `{ ... }` scope - produced by sema (for..in desugaring), never
     /// by the parser.
     Scope(Block),
     /// `try { ... } catch (e: Exception) { ... }`
@@ -215,14 +215,14 @@ pub enum ExprKind {
     This,
     ArrayLit(Vec<Expr>),
     Call { name: String, args: Vec<Expr> },
-    /// `max<Vector<Float>, Float>(v)` — a call with explicit generic type
+    /// `max<Vector<Float>, Float>(v)` - a call with explicit generic type
     /// arguments (the fallback when inference has no context).
     GenericCall { name: String, type_args: Vec<Type>, args: Vec<Expr> },
     MethodCall { recv: Box<Expr>, name: String, args: Vec<Expr> },
-    /// A method call whose receiver class is resolved — produced by sema
+    /// A method call whose receiver class is resolved - produced by sema
     /// (never by the parser), consumed by codegen.
     CoreMethodCall { class: String, name: String, recv: Box<Expr>, args: Vec<Expr> },
-    /// Optional machinery — all produced by sema only. `payload` is the T of
+    /// Optional machinery - all produced by sema only. `payload` is the T of
     /// the T? (core values use tagged structs; classes, containers, and
     /// pointers use nullable representations).
     OptWrap { payload: Type, expr: Box<Expr> },
@@ -232,11 +232,11 @@ pub enum ExprKind {
     OptNone { payload: Type },
     /// Presence test: `x != None` lowers to this; `x == None` to `not` of it.
     OptHas { payload: Type, expr: Box<Expr> },
-    /// Instantiation `Shape(1, 2)` — produced by sema from a Call whose name
+    /// Instantiation `Shape(1, 2)` - produced by sema from a Call whose name
     /// resolves to a class. `class` is a class key (may be "Vector<Integer>").
     New { class: String, args: Vec<Expr> },
-    /// `[a, b, c]` after context-typing — builds a container through its
-    /// constructor + set/push protocol (docs/DESIGN.md §7a).
+    /// `[a, b, c]` after context-typing - builds a container through its
+    /// constructor + set/push protocol (docs/DESIGN.md section 7a).
     ContainerLit { class: String, is_array: bool, elems: Vec<Expr> },
     /// `@buf_alloc(n)` with its element type resolved from context.
     BufAlloc { elem: Type, size: Box<Expr> },

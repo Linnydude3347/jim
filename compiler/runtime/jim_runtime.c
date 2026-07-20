@@ -1,7 +1,7 @@
 /* ==== jim runtime v0 ====
  * Embedded verbatim at the top of every generated translation unit.
  * Memory model: bump arena, freed in one sweep at exit (jim has no free()).
- * Every rt_* function backs a compiler intrinsic (see docs/DESIGN.md §6).
+ * Every rt_* function backs a compiler intrinsic (see docs/DESIGN.md section 6).
  */
 #include <stdint.h>
 #include <stdbool.h>
@@ -73,7 +73,7 @@ static void rt_shutdown(void) {
  * Panics unwind to the innermost try (setjmp/longjmp handler stack);
  * uncaught, they print and exit(1).
  *
- * In panic=abort builds (JIM_PANIC_ABORT — used by the browser playground,
+ * In panic=abort builds (JIM_PANIC_ABORT - used by the browser playground,
  * where wasm setjmp/longjmp isn't portably available) there is no handler
  * stack: every panic prints and exits, and codegen omits try/catch handlers.
  */
@@ -92,7 +92,7 @@ static jim_str rt_current_exc;
 /* ---- stack traces ----
  * Debug builds (`jimc run`, `jimc build --debug`) maintain a shadow stack:
  * push/pop per jim function, plus a line store before each call. Release
- * builds emit none of these calls — rt_frame_top stays 0 and panics print
+ * builds emit none of these calls - rt_frame_top stays 0 and panics print
  * exactly as before. The frames beyond the cap are counted, not stored.
  */
 
@@ -351,7 +351,7 @@ static jim_str rt_char_to_string(uint8_t c) {
 
 static int64_t rt_str_len(jim_str s) { return s.len; }
 
-/* unchecked byte read — the std library's String.get adds the bounds check */
+/* unchecked byte read - the std library's String.get adds the bounds check */
 static uint8_t rt_str_byte(jim_str s, int64_t i) { return (uint8_t)s.ptr[i]; }
 
 static jim_str rt_str_concat(jim_str a, jim_str b) {
@@ -377,13 +377,13 @@ static bool rt_str_lt(jim_str a, jim_str b) {
     return a.len < b.len;
 }
 
-/* zero-copy substring view — strings are immutable, so a slice can alias the
+/* zero-copy substring view - strings are immutable, so a slice can alias the
  * original bytes. Unchecked: the std library adds the bounds checks. */
 static jim_str rt_str_slice(jim_str s, int64_t start, int64_t len) {
     return rt_str_lit(s.ptr + start, len);
 }
 
-/* one copy out of raw byte storage — the string-builder escape hatch */
+/* one copy out of raw byte storage - the string-builder escape hatch */
 static jim_str rt_str_from_bytes(const uint8_t* p, int64_t len) {
     if (len <= 0) return rt_str_lit("", 0);
     char* q = (char*)rt_arena_alloc((size_t)len);
@@ -422,7 +422,7 @@ static jim_opt_f64 rt_str_to_f64(jim_str s) {
     return rt_opt_f64_some(v);
 }
 
-/* ---- Float math (libm; IEEE-permissive — domain errors yield nan/inf,
+/* ---- Float math (libm; IEEE-permissive - domain errors yield nan/inf,
  * policy such as "None for sqrt of a negative" belongs in jim code) ---- */
 
 static double rt_f64_sqrt(double x) { return sqrt(x); }

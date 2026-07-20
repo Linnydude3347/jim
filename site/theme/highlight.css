@@ -1,4 +1,4 @@
-/* Jim Monokai — highlight.js theme for the jim docs site.
+/* Jim Monokai - highlight.js theme for the jim docs site.
  * Colors mirror editors/vscode-jim/themes/jim-monokai-color-theme.json so code
  * on the site matches the VS Code extension. mdBook uses this file in place of
  * its bundled highlight.css for every fenced code block. */
@@ -16,14 +16,14 @@ pre:has(> code.hljs) {
   background: #272822;
 }
 
-/* comments — #75715E */
+/* comments - #75715E */
 .hljs-comment,
 .hljs-quote {
   color: #75715e;
   font-style: italic;
 }
 
-/* keywords, storage, operators, and the #import directive — #F92672 */
+/* keywords, storage, operators, and the #import directive - #F92672 */
 .hljs-keyword,
 .hljs-selector-tag,
 .hljs-meta,
@@ -31,7 +31,7 @@ pre:has(> code.hljs) {
   color: #f92672;
 }
 
-/* strings and chars, incl. <module> inside #import — #E6DB74 */
+/* strings and chars, incl. <module> inside #import - #E6DB74 */
 .hljs-string,
 .hljs-regexp,
 .hljs-attr,
@@ -40,13 +40,13 @@ pre:has(> code.hljs) {
   color: #e6db74;
 }
 
-/* numbers and language constants true/false/None — #AE81FF */
+/* numbers and language constants true/false/None - #AE81FF */
 .hljs-number,
 .hljs-literal {
   color: #ae81ff;
 }
 
-/* built-in and user types — #66D9EF italic */
+/* built-in and user types - #66D9EF italic */
 .hljs-built_in,
 .hljs-type,
 .hljs-class .hljs-title {
@@ -54,7 +54,7 @@ pre:has(> code.hljs) {
   font-style: italic;
 }
 
-/* function / method names — #A6E22E */
+/* function / method names - #A6E22E */
 .hljs-title,
 .hljs-title.function_,
 .hljs-section,
@@ -62,7 +62,7 @@ pre:has(> code.hljs) {
   color: #a6e22e;
 }
 
-/* `this`, and intrinsics @... — #FD971F */
+/* `this`, and intrinsics @... - #FD971F */
 .hljs-variable,
 .hljs-symbol,
 .hljs-params,
@@ -73,7 +73,7 @@ pre:has(> code.hljs) {
   font-style: italic;
 }
 
-/* invalid — #F44747 */
+/* invalid - #F44747 */
 .hljs-deletion {
   color: #f44747;
 }

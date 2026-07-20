@@ -8,7 +8,7 @@
          SharedArrayBuffer. GitHub Pages can't set COOP/COEP headers, so this
          service worker injects them; credentialless keeps the CDN loads working.
          Must run first. Only effective at the top level (the full-screen page),
-         not inside the docs iframe — see the Run handler. -->
+         not inside the docs iframe - see the Run handler. -->
     <script>
       window.coi = { coepCredentialless: () => true };
     </script>
@@ -39,8 +39,8 @@
           <option value="errors">try / catch</option>
           <option value="generics">Generic functions</option>
         </select>
-        <span id="status" class="status">loading…</span>
-        <button id="run" class="btn-run" disabled>Run ▸</button>
+        <span id="status" class="status">loading...</span>
+        <button id="run" class="btn-run" disabled>Run</button>
       </div>
     </header>
 
@@ -60,7 +60,7 @@
       <div class="console-title">
         <span>program output</span>
         <span id="run-status" class="muted"></span>
-        <button id="console-close" class="close" title="Close">×</button>
+        <button id="console-close" class="close" title="Close">x</button>
       </div>
       <pre id="run-output"></pre>
     </div>
