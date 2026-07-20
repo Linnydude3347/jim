@@ -1,3 +1,6 @@
+// Note: All of these functions are simply wrappers for the intrinsics
+// we use internally to convert this code into C.
+
 // Prints the string to stdout.
 function print(s: String) -> None {
     @print_string(s);
@@ -7,25 +10,37 @@ function print(s: String) -> None {
 
 // Return one line read from stdin, without the trailing newline. Returns
 // None when the end of input has been reached.
-function input() -> String?{}
+function input() -> String? {
+    return @read_line();
+}
 
 // Prints the string to stderr instead of stdout. Use for errors and
 // warnings so they can be separated from program output.
-function print_err(msg: String) -> None{}
+function print_err(msg: String) -> None {
+    @print_err(msg);
+}
 
 // Return the entire contents of the file at path `file` as one string.
 // Returns None if the file does not exist or cannot be read.
-function read_file(file: String) -> String?{}
+function read_file(file: String) -> String?{
+    return @read_file(file);
+}
 
 // Write `content` to the file at path `file`, replacing whatever the file
 // held before (the file is created if it does not exist). Returns the number
 // of bytes written, or None if the file could not be written.
-function write_file(file: String, content: String) -> Integer?{}
+function write_file(file: String, content: String) -> Integer? {
+    return @write_file(file, content);
+}
 
 // Append `content` to the end of the file at path `file` (the file is
 // created if it does not exist). Returns the number of bytes written, or
 // None if the file could not be written.
-function append_file(file: String, content: String) -> Integer?{}
+function append_file(file: String, content: String) -> Integer? {
+    return @append_file(file, content);
+}
 
 // Return true if a file exists at path `file`, false otherwise.
-function file_exists(file: String) -> Bool?{}
+function file_exists(file: String) -> Bool {
+    return @file_exists(file);
+}
