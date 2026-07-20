@@ -137,6 +137,31 @@ fn panic_abort_mode_strips_setjmp() {
 }
 
 #[test]
+fn dce_prunes_unused_stdlib() {
+    // Hello world touches only print + a String literal, so the generated C
+    // must not carry unrelated stdlib methods (dead-code elimination).
+    let mut files = fake_std_map();
+    files.insert(
+        "main.j".to_string(),
+        "#import <io>\nfunction main() -> Integer { print(\"hi\"); return 0; }\n".to_string(),
+    );
+    let c = compile_to_c("main.j", files, Some("std".to_string()), false, false, false)
+        .expect("hello compiles");
+    assert!(!c.contains("jim_m_Float_plus"), "unused Float.plus should be pruned");
+    assert!(!c.contains("jim_m_Integer_times"), "unused Integer.times should be pruned");
+
+    // A program that adds Integers keeps Integer.plus (operators desugar to it).
+    let mut files2 = fake_std_map();
+    files2.insert(
+        "main.j".to_string(),
+        "function main() -> Integer { var x: Integer = 1 + 2; return x; }\n".to_string(),
+    );
+    let c2 = compile_to_c("main.j", files2, Some("std".to_string()), false, false, false)
+        .expect("add compiles");
+    assert!(c2.contains("jim_m_Integer_plus"), "used Integer.plus must be emitted");
+}
+
+#[test]
 fn a_type_error_comes_back_rendered() {
     // No filesystem, but diagnostics still render with a path:line:col header.
     let mut files = fake_std_map();

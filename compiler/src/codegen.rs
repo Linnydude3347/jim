@@ -33,6 +33,225 @@ pub fn generate(program: &Program, files: &[String], debug: bool, panic_abort: b
     cg.generate(program)
 }
 
+/// Reachability from `main`: which functions, methods, and class constructors
+/// the program can actually use. jim is statically dispatched (no vtables, no
+/// reflection), so a mark-and-sweep over the lowered AST is exact, and codegen
+/// can emit only reachable bodies. That keeps the generated C to the user's
+/// program plus what it touches, instead of the whole standard library.
+struct Reach {
+    fns: HashSet<String>,
+    methods: HashSet<String>, // "Class#method"
+    instantiated: HashSet<String>, // classes whose constructor can run
+}
+
+fn method_key(class: &str, method: &str) -> String {
+    format!("{}#{}", class, method)
+}
+
+fn compute_reachable(program: &Program, main_takes_argv: bool) -> Reach {
+    use std::collections::HashMap;
+    let fn_by: HashMap<&str, &FunctionDecl> =
+        program.functions.iter().map(|f| (f.name.as_str(), f)).collect();
+    let class_by: HashMap<&str, &ClassDecl> =
+        program.classes.iter().map(|c| (c.name.as_str(), c)).collect();
+    let mut method_by: HashMap<(&str, &str), &MethodDecl> = HashMap::new();
+    for c in &program.classes {
+        for m in &c.methods {
+            method_by.insert((c.name.as_str(), m.name.as_str()), m);
+        }
+    }
+
+    let mut reach = Reach {
+        fns: HashSet::new(),
+        methods: HashSet::new(),
+        instantiated: HashSet::new(),
+    };
+    // Worklists of names still to process. `main` is the sole root.
+    let mut fns: Vec<String> = vec!["main".to_string()];
+    let mut methods: Vec<(String, String)> = Vec::new();
+    let mut classes: Vec<String> = Vec::new();
+
+    // The argv entry point builds an Array<String> directly in the C wrapper.
+    if main_takes_argv {
+        classes.push("Array<String>".to_string());
+        methods.push(("Array<String>".to_string(), "set".to_string()));
+    }
+
+    loop {
+        if let Some(name) = fns.pop() {
+            if !reach.fns.insert(name.clone()) {
+                continue;
+            }
+            if let Some(f) = fn_by.get(name.as_str()) {
+                walk_block(&f.body, &mut fns, &mut methods, &mut classes);
+            }
+        } else if let Some((cls, m)) = methods.pop() {
+            if !reach.methods.insert(method_key(&cls, &m)) {
+                continue;
+            }
+            if let Some(md) = method_by.get(&(cls.as_str(), m.as_str())) {
+                walk_block(&md.body, &mut fns, &mut methods, &mut classes);
+            }
+        } else if let Some(cls) = classes.pop() {
+            if !reach.instantiated.insert(cls.clone()) {
+                continue;
+            }
+            if let Some(c) = class_by.get(cls.as_str()) {
+                // Field defaults run in the constructor, so their calls count.
+                for fld in &c.fields {
+                    walk_expr(&fld.default, &mut fns, &mut methods, &mut classes);
+                }
+                if let Some(ct) = &c.ctor {
+                    walk_block(&ct.body, &mut fns, &mut methods, &mut classes);
+                }
+            }
+        } else {
+            break;
+        }
+    }
+    reach
+}
+
+fn walk_block(
+    b: &Block,
+    fns: &mut Vec<String>,
+    methods: &mut Vec<(String, String)>,
+    classes: &mut Vec<String>,
+) {
+    for s in &b.stmts {
+        walk_stmt(s, fns, methods, classes);
+    }
+}
+
+fn walk_stmt(
+    s: &Stmt,
+    fns: &mut Vec<String>,
+    methods: &mut Vec<(String, String)>,
+    classes: &mut Vec<String>,
+) {
+    match &s.kind {
+        StmtKind::VarDecl { init, .. } => walk_expr(init, fns, methods, classes),
+        StmtKind::Assign { target, value, .. } => {
+            walk_expr(target, fns, methods, classes);
+            walk_expr(value, fns, methods, classes);
+        }
+        StmtKind::IncDec { target, .. } => walk_expr(target, fns, methods, classes),
+        StmtKind::ExprStmt(e) => walk_expr(e, fns, methods, classes),
+        StmtKind::Return(Some(e)) => walk_expr(e, fns, methods, classes),
+        StmtKind::Return(None) => {}
+        StmtKind::If { arms, else_block } => {
+            for (cond, body) in arms {
+                walk_expr(cond, fns, methods, classes);
+                walk_block(body, fns, methods, classes);
+            }
+            if let Some(b) = else_block {
+                walk_block(b, fns, methods, classes);
+            }
+        }
+        StmtKind::While { cond, body } => {
+            walk_expr(cond, fns, methods, classes);
+            walk_block(body, fns, methods, classes);
+        }
+        StmtKind::ForC { init, cond, step, body, .. } => {
+            walk_expr(init, fns, methods, classes);
+            walk_expr(cond, fns, methods, classes);
+            walk_stmt(step, fns, methods, classes);
+            walk_block(body, fns, methods, classes);
+        }
+        StmtKind::ForIn { iterable, body, .. } => {
+            walk_expr(iterable, fns, methods, classes);
+            walk_block(body, fns, methods, classes);
+        }
+        StmtKind::Break | StmtKind::Continue => {}
+        StmtKind::Scope(b) => walk_block(b, fns, methods, classes),
+        StmtKind::TryCatch { body, catch_body, .. } => {
+            walk_block(body, fns, methods, classes);
+            walk_block(catch_body, fns, methods, classes);
+        }
+    }
+}
+
+fn walk_expr(
+    e: &Expr,
+    fns: &mut Vec<String>,
+    methods: &mut Vec<(String, String)>,
+    classes: &mut Vec<String>,
+) {
+    match &e.kind {
+        ExprKind::Call { name, args } => {
+            fns.push(name.clone());
+            for a in args {
+                walk_expr(a, fns, methods, classes);
+            }
+        }
+        ExprKind::GenericCall { name, args, .. } => {
+            fns.push(name.clone());
+            for a in args {
+                walk_expr(a, fns, methods, classes);
+            }
+        }
+        ExprKind::MethodCall { recv, args, .. } => {
+            walk_expr(recv, fns, methods, classes);
+            for a in args {
+                walk_expr(a, fns, methods, classes);
+            }
+        }
+        ExprKind::CoreMethodCall { class, name, recv, args } => {
+            methods.push((class.clone(), name.clone()));
+            walk_expr(recv, fns, methods, classes);
+            for a in args {
+                walk_expr(a, fns, methods, classes);
+            }
+        }
+        ExprKind::New { class, args } => {
+            classes.push(class.clone());
+            for a in args {
+                walk_expr(a, fns, methods, classes);
+            }
+        }
+        ExprKind::ContainerLit { class, is_array, elems } => {
+            classes.push(class.clone());
+            methods.push((class.clone(), if *is_array { "set" } else { "push" }.to_string()));
+            for el in elems {
+                walk_expr(el, fns, methods, classes);
+            }
+        }
+        ExprKind::BufAlloc { size, .. } => walk_expr(size, fns, methods, classes),
+        ExprKind::ArrayLit(elems) => {
+            for el in elems {
+                walk_expr(el, fns, methods, classes);
+            }
+        }
+        ExprKind::OptWrap { expr, .. }
+        | ExprKind::OptUnwrap { expr, .. }
+        | ExprKind::OptHas { expr, .. } => walk_expr(expr, fns, methods, classes),
+        ExprKind::FieldAccess { recv, .. } => walk_expr(recv, fns, methods, classes),
+        ExprKind::Index { recv, index } => {
+            walk_expr(recv, fns, methods, classes);
+            walk_expr(index, fns, methods, classes);
+        }
+        ExprKind::IntrinsicCall { args, .. } => {
+            for a in args {
+                walk_expr(a, fns, methods, classes);
+            }
+        }
+        ExprKind::Binary { lhs, rhs, .. } => {
+            walk_expr(lhs, fns, methods, classes);
+            walk_expr(rhs, fns, methods, classes);
+        }
+        ExprKind::Unary { operand, .. } => walk_expr(operand, fns, methods, classes),
+        ExprKind::Int(_)
+        | ExprKind::Float(_)
+        | ExprKind::Str(_)
+        | ExprKind::CharLit(_)
+        | ExprKind::Bool(_)
+        | ExprKind::NoneLit
+        | ExprKind::Ident(_)
+        | ExprKind::This
+        | ExprKind::OptNone { .. } => {}
+    }
+}
+
 struct Cg {
     /// Reference classes (arena-allocated, represented as pointers).
     user_classes: HashSet<String>,
@@ -53,6 +272,14 @@ struct Cg {
 
 impl Cg {
     fn generate(&self, program: &Program) -> String {
+        let main_takes_argv = program
+            .functions
+            .iter()
+            .find(|f| f.name == "main")
+            .map_or(false, |m| !m.params.is_empty());
+        // Dead-code elimination: only emit what `main` can reach.
+        let reach = compute_reachable(program, main_takes_argv);
+
         let mut out = String::with_capacity(RUNTIME.len() + 8192);
         out.push_str("/* generated by jimc - do not edit */\n");
         if self.panic_abort {
@@ -93,24 +320,28 @@ impl Cg {
         // ---- prototypes ----
         out.push_str("/* ==== jim program ==== */\n\n");
         for c in &program.classes {
-            if self.user_classes.contains(&c.name) {
+            if self.user_classes.contains(&c.name) && reach.instantiated.contains(&c.name) {
                 out.push_str(&self.ctor_signature(c));
                 out.push_str(";\n");
             }
             for m in &c.methods {
-                out.push_str(&self.method_signature(c, m));
-                out.push_str(";\n");
+                if reach.methods.contains(&method_key(&c.name, &m.name)) {
+                    out.push_str(&self.method_signature(c, m));
+                    out.push_str(";\n");
+                }
             }
         }
         for f in &program.functions {
-            out.push_str(&self.signature(f));
-            out.push_str(";\n");
+            if reach.fns.contains(&f.name) {
+                out.push_str(&self.signature(f));
+                out.push_str(";\n");
+            }
         }
         out.push('\n');
 
         // ---- definitions ----
         for c in &program.classes {
-            if self.user_classes.contains(&c.name) {
+            if self.user_classes.contains(&c.name) && reach.instantiated.contains(&c.name) {
                 self.set_panic_ctx(c.file_idx, format!("{} constructor", c.name));
                 *self.ret_ctype.borrow_mut() = "void".to_string();
                 out.push_str(&self.ctor_signature(c));
@@ -134,6 +365,9 @@ impl Cg {
                 out.push_str("    return jl_this;\n}\n\n");
             }
             for m in &c.methods {
+                if !reach.methods.contains(&method_key(&c.name, &m.name)) {
+                    continue;
+                }
                 self.set_panic_ctx(c.file_idx, format!("{}.{}", c.name, m.name));
                 *self.ret_ctype.borrow_mut() = self.ctype(&m.ret);
                 out.push_str(&self.method_signature(c, m));
@@ -150,6 +384,9 @@ impl Cg {
             }
         }
         for f in &program.functions {
+            if !reach.fns.contains(&f.name) {
+                continue;
+            }
             self.set_panic_ctx(f.file_idx, f.name.clone());
             *self.ret_ctype.borrow_mut() = self.ctype(&f.ret);
             out.push_str(&self.signature(f));
@@ -170,11 +407,6 @@ impl Cg {
         }
 
         // ---- the C entry point (argv form builds Array<String> first) ----
-        let main_takes_argv = program
-            .functions
-            .iter()
-            .find(|f| f.name == "main")
-            .map_or(false, |m| !m.params.is_empty());
         if main_takes_argv {
             let k = c_name("Array<String>");
             out.push_str(&format!(
