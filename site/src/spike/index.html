@@ -122,6 +122,17 @@ done</pre>
         Wasmer,
         Directory,
       } from "https://unpkg.com/@wasmer/sdk@0.8.0-beta.1/dist/index.mjs";
+      // We compile with Wasmer's clang, but RUN the output on the browser's
+      // native WebAssembly engine (which supports wasm exception-handling, and
+      // therefore setjmp/longjmp) via this WASI shim. Wasmer's own SDK engine
+      // can't instantiate EH modules — that was the "unreachable" crash.
+      import {
+        WASI,
+        OpenFile,
+        File as WasiFile,
+        ConsoleStdout,
+        WASIProcExit,
+      } from "https://esm.sh/@bjorn3/browser_wasi_shim@0.4.2";
 
       const logEl = document.getElementById("log");
       const jimBtn = document.getElementById("run-jim");
@@ -180,19 +191,32 @@ done</pre>
           log(`clang failed (exit ${cout.code}).`, "err");
           return { ok: false, ccStderr, stdout: "", stderr: "" };
         }
-        log("Compiled. Running the produced wasm…");
+        log("Compiled. Running on the browser's native WebAssembly engine…");
 
-        const wasm = await project.readFile(wasmName);
-        const mod = await Wasmer.fromFile(wasm);
-        const rres = await mod.entrypoint.run();
-        const rout = await rres.wait();
-        log(`Program exited ${rout.code}.`, rout.code === 0 ? "ok" : "err");
-        return {
-          ok: true,
-          ccStderr,
-          stdout: rout.stdout || "",
-          stderr: rout.stderr || "",
-        };
+        const wasmBytes = await project.readFile(wasmName);
+
+        // Capture stdout/stderr through the WASI shim's fd hooks.
+        let out = "";
+        const fds = [
+          new OpenFile(new WasiFile([])), // fd 0: stdin (empty)
+          ConsoleStdout.lineBuffered((m) => (out += m + "\n")), // fd 1: stdout
+          ConsoleStdout.lineBuffered((m) => (out += "[stderr] " + m + "\n")), // fd 2
+        ];
+        const wasiInst = new WASI([], [], fds);
+        const { instance } = await WebAssembly.instantiate(wasmBytes, {
+          wasi_snapshot_preview1: wasiInst.wasiImport,
+        });
+
+        let exitCode = 0;
+        try {
+          const rc = wasiInst.start(instance);
+          if (typeof rc === "number") exitCode = rc;
+        } catch (e) {
+          if (e instanceof WASIProcExit) exitCode = e.code;
+          else throw e;
+        }
+        log(`Program exited ${exitCode}.`, exitCode === 0 ? "ok" : "err");
+        return { ok: true, ccStderr, stdout: out, stderr: "" };
       }
 
       // clang-16's wasi-libc keeps setjmp/longjmp INSIDE libc (the separate
