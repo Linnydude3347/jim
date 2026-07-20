@@ -64,6 +64,9 @@
         coiEl.className = "err";
       }
 
+      // The click handler initializes Wasmer itself, so enable it now.
+      runBtn.disabled = false;
+
       function log(m, cls) {
         logEl.innerHTML += "\n" + (cls ? `<span class="${cls}">${m}</span>` : m);
       }
