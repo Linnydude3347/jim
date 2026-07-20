@@ -3,7 +3,7 @@
 // `jim-playground` is jimc compiled to WebAssembly (see playground/wasm). Its
 // `compile(source)` runs the real compiler front-end against the real standard
 // library and returns the generated C — or a rendered diagnostic.
-import init, { compile, version } from "./pkg/jim_playground.js";
+import init, { compile, compile_run, version } from "./pkg/jim_playground.js";
 
 // A menu of ready-to-run programs. Keys match the <option> values in index.html.
 const EXAMPLES = {
@@ -213,6 +213,10 @@ const runBtn = document.getElementById("run");
 const errorEl = document.getElementById("error");
 const outputEl = document.getElementById("output");
 const examplesEl = document.getElementById("examples");
+const consoleEl = document.getElementById("console");
+const runOutputEl = document.getElementById("run-output");
+const runStatusEl = document.getElementById("run-status");
+const consoleCloseEl = document.getElementById("console-close");
 
 let ready = false;
 
@@ -244,7 +248,83 @@ editor.on("change", () => {
   clearTimeout(timer);
   timer = setTimeout(doCompile, 400);
 });
-runBtn.addEventListener("click", doCompile);
+// ---- Run: jim --(compile_run: panic=abort)--> C --(Wasmer clang)--> wasm
+//      --(Wasmer run)--> stdout. Wasmer is loaded lazily on first Run so the
+//      "see the C" experience stays lightweight. Requires cross-origin
+//      isolation (SharedArrayBuffer), which only holds on the full-screen page.
+let wasmer = null; // the @wasmer/sdk module (dynamically imported)
+let clang = null; // the fetched clang/clang package
+
+function setRunStatus(text) {
+  runStatusEl.textContent = text;
+}
+function showRunOutput(text, isErr) {
+  runOutputEl.textContent = text;
+  runOutputEl.className = isErr ? "err" : "";
+}
+
+async function ensureToolchain() {
+  if (clang) return;
+  if (!window.crossOriginIsolated) {
+    throw new Error(
+      "This embedded preview can't run programs — execution needs cross-origin " +
+        "isolation. Open the playground full-screen (link on the Playground page) to run."
+    );
+  }
+  setRunStatus("loading C toolchain (~30 MB, one time)…");
+  wasmer = await import("https://unpkg.com/@wasmer/sdk@0.8.0-beta.1/dist/index.mjs");
+  await wasmer.init();
+  clang = await wasmer.Wasmer.fromRegistry("clang/clang");
+}
+
+async function runProgram() {
+  consoleEl.hidden = false;
+  runBtn.disabled = true;
+  showRunOutput("", false);
+  try {
+    // 1. jim -> C in "panic=abort" form (no setjmp; try/catch can't catch here).
+    const compiled = compile_run(editor.getValue());
+    if (!compiled.ok) {
+      setRunStatus("compile error");
+      showRunOutput(compiled.error, true);
+      return;
+    }
+    // 2. C -> wasm via Wasmer's clang.
+    await ensureToolchain();
+    setRunStatus("compiling to wasm…");
+    const project = new wasmer.Directory();
+    await project.writeFile("prog.c", compiled.c);
+    const cc = await clang.entrypoint.run({
+      args: ["/project/prog.c", "-o", "/project/prog.wasm", "-lm"],
+      mount: { "/project": project },
+    });
+    const ccOut = await cc.wait();
+    if (!ccOut.ok) {
+      setRunStatus("toolchain error");
+      showRunOutput(ccOut.stderr || "the C toolchain failed", true);
+      return;
+    }
+    // 3. Run the produced module and capture stdout.
+    setRunStatus("running…");
+    const bytes = await project.readFile("prog.wasm");
+    const mod = await wasmer.Wasmer.fromFile(bytes);
+    const res = await mod.entrypoint.run();
+    const out = await res.wait();
+    const text = (out.stdout || "") + (out.stderr ? "\n" + out.stderr : "");
+    showRunOutput(text || "(no output)", out.code !== 0);
+    setRunStatus(`exit ${out.code}`);
+  } catch (e) {
+    setRunStatus("error");
+    showRunOutput(e && e.message ? e.message : String(e), true);
+  } finally {
+    runBtn.disabled = false;
+  }
+}
+
+runBtn.addEventListener("click", runProgram);
+consoleCloseEl.addEventListener("click", () => {
+  consoleEl.hidden = true;
+});
 
 examplesEl.addEventListener("change", () => {
   const src = EXAMPLES[examplesEl.value];

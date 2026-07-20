@@ -4,6 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>jim playground</title>
+    <!-- Cross-origin isolation so the in-browser C toolchain (Wasmer) can use
+         SharedArrayBuffer. GitHub Pages can't set COOP/COEP headers, so this
+         service worker injects them; credentialless keeps the CDN loads working.
+         Must run first. Only effective at the top level (the full-screen page),
+         not inside the docs iframe — see the Run handler. -->
+    <script>
+      window.coi = { coepCredentialless: () => true };
+    </script>
+    <script src="coi-serviceworker.js"></script>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css"
@@ -31,7 +40,7 @@
           <option value="generics">Generic functions</option>
         </select>
         <span id="status" class="status">loading…</span>
-        <button id="run" disabled>Compile ▸</button>
+        <button id="run" class="btn-run" disabled>Run ▸</button>
       </div>
     </header>
 
@@ -46,6 +55,15 @@
         <pre id="error" class="error" hidden></pre>
       </section>
     </main>
+
+    <div id="console" class="console" hidden>
+      <div class="console-title">
+        <span>program output</span>
+        <span id="run-status" class="muted"></span>
+        <button id="console-close" class="close" title="Close">×</button>
+      </div>
+      <pre id="run-output"></pre>
+    </div>
 
     <script type="module" src="./app.js"></script>
   </body>
