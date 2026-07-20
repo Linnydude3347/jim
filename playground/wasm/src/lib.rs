@@ -68,18 +68,14 @@ impl CompileResult {
     }
 }
 
-/// Compile a jim program to C11. `source` is the user's program (containing
-/// `main`); it is compiled against the embedded real standard library. User
-/// code may not use `@intrinsics` — only std files can.
-#[wasm_bindgen]
-pub fn compile(source: &str) -> CompileResult {
+fn compile_with(source: &str, panic_abort: bool) -> CompileResult {
     let mut files: HashMap<String, String> = STD_FILES
         .iter()
         .map(|(path, src)| (path.to_string(), src.to_string()))
         .collect();
     files.insert("main.j".to_string(), source.to_string());
 
-    match jimc::compile_to_c("main.j", files, Some("std".to_string()), false, false) {
+    match jimc::compile_to_c("main.j", files, Some("std".to_string()), false, false, panic_abort) {
         Ok(c) => CompileResult {
             ok: true,
             c,
@@ -91,6 +87,24 @@ pub fn compile(source: &str) -> CompileResult {
             error,
         },
     }
+}
+
+/// Compile a jim program to C11 for DISPLAY — the real codegen, including
+/// setjmp/longjmp-based try/catch. `source` is the user's program (containing
+/// `main`), compiled against the embedded real standard library. User code may
+/// not use `@intrinsics` — only std files can.
+#[wasm_bindgen]
+pub fn compile(source: &str) -> CompileResult {
+    compile_with(source, false)
+}
+
+/// Compile a jim program to C11 for RUNNING in the browser — `panic=abort` mode,
+/// which omits setjmp/longjmp so the C is compilable by the in-browser toolchain.
+/// Trade-off: `try`/`catch` cannot catch panics (an uncaught panic prints and
+/// exits, matching jim's uncaught-panic behavior).
+#[wasm_bindgen]
+pub fn compile_run(source: &str) -> CompileResult {
+    compile_with(source, true)
 }
 
 /// The playground wrapper's version, for display in the UI.

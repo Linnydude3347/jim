@@ -18,6 +18,8 @@ OPTIONS:
     --allow-intrinsics   permit @intrinsics outside the std library (test fixtures)
     --debug              panics print full jim stack traces (default for `run`)
     --release            no panic traces, zero tracing overhead (default for `build`)
+    --panic-abort        panics print + exit (no try/catch); emits C without
+                         setjmp — for toolchains lacking wasm setjmp
     -h, --help           show this help
     --version            show version
 ";
@@ -54,6 +56,7 @@ fn real_main(args: Vec<String>) -> i32 {
         cc: None,
         allow_intrinsics: false,
         debug: false,
+        panic_abort: false,
     };
 
     let mut i = 1;
@@ -85,6 +88,7 @@ fn real_main(args: Vec<String>) -> i32 {
             "--allow-intrinsics" => opts.allow_intrinsics = true,
             "--debug" => debug_flag = Some(true),
             "--release" => debug_flag = Some(false),
+            "--panic-abort" => opts.panic_abort = true,
             other if other.starts_with('-') => {
                 return usage_error(&format!("jimc: unknown flag '{}'", other));
             }

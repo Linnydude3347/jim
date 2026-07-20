@@ -8,7 +8,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <setjmp.h>
+#ifndef JIM_PANIC_ABORT
+#include <setjmp.h> /* try/catch unwinding; omitted in panic=abort builds */
+#endif
 #include <math.h>
 #include <errno.h>
 
@@ -70,8 +72,13 @@ static void rt_shutdown(void) {
 /* ---- panics & try/catch ----
  * Panics unwind to the innermost try (setjmp/longjmp handler stack);
  * uncaught, they print and exit(1).
+ *
+ * In panic=abort builds (JIM_PANIC_ABORT — used by the browser playground,
+ * where wasm setjmp/longjmp isn't portably available) there is no handler
+ * stack: every panic prints and exits, and codegen omits try/catch handlers.
  */
 
+#ifndef JIM_PANIC_ABORT
 typedef struct rt_handler {
     jmp_buf buf;
     struct rt_handler* prev;
@@ -80,6 +87,7 @@ typedef struct rt_handler {
 
 static rt_handler* rt_handlers = NULL;
 static jim_str rt_current_exc;
+#endif
 
 /* ---- stack traces ----
  * Debug builds (`jimc run`, `jimc build --debug`) maintain a shadow stack:
@@ -129,6 +137,7 @@ static void rt_print_trace(void) {
 }
 
 static void rt_panic(jim_str msg) {
+#ifndef JIM_PANIC_ABORT
     if (rt_handlers != NULL) {
         rt_current_exc = msg;
         rt_handler* h = rt_handlers;
@@ -136,6 +145,7 @@ static void rt_panic(jim_str msg) {
         rt_frame_top = h->frame_top;  /* unwind the shadow stack too */
         longjmp(h->buf, 1);
     }
+#endif
     fputs("jim panic: ", stderr);
     fwrite(msg.ptr, 1, (size_t)msg.len, stderr);
     fputc('\n', stderr);
@@ -153,9 +163,11 @@ static void rt_panic_cstr(const char* msg) {
  * innermost frame already holds this location, so the full trace replaces
  * the single-line form. */
 static void rt_panic_at(jim_str msg, const char* file, int line, const char* fn) {
+#ifndef JIM_PANIC_ABORT
     if (rt_handlers != NULL) {
         rt_panic(msg);
     }
+#endif
     fputs("jim panic: ", stderr);
     fwrite(msg.ptr, 1, (size_t)msg.len, stderr);
     fputc('\n', stderr);

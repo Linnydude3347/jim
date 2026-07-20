@@ -23,6 +23,10 @@ pub struct Options {
     /// Emit shadow-stack maintenance so panics print full jim stack traces.
     /// `jimc run` defaults to true (the dev loop), `jimc build` to false.
     pub debug: bool,
+    /// Panics print + exit instead of setjmp/longjmp unwinding (no try/catch
+    /// handling). Produces C with no setjmp — for toolchains where wasm
+    /// setjmp isn't available (the browser playground's run path).
+    pub panic_abort: bool,
 }
 
 /// Load the entry file plus everything it (transitively) imports, merged into
@@ -157,10 +161,11 @@ pub fn compile_to_c(
     std_root: Option<String>,
     allow_intrinsics: bool,
     debug: bool,
+    panic_abort: bool,
 ) -> Result<String, String> {
     let loader = MapLoader::new(files, std_root);
     let (program, file_names) = load_program(&loader, entry, allow_intrinsics, true)?;
-    Ok(codegen::generate(&program, &file_names, debug))
+    Ok(codegen::generate(&program, &file_names, debug, panic_abort))
 }
 
 // ---------------------------------------------------------------------------
@@ -268,7 +273,7 @@ pub fn build(opts: &Options) -> Result<PathBuf, String> {
         opts.allow_intrinsics,
         true,
     )?;
-    let c_source = codegen::generate(&program, &file_names, opts.debug);
+    let c_source = codegen::generate(&program, &file_names, opts.debug, opts.panic_abort);
 
     if let Some(c_path) = &opts.emit_c {
         std::fs::write(c_path, &c_source)
@@ -341,5 +346,6 @@ fn clone_opts(o: &Options) -> Options {
         cc: o.cc.clone(),
         allow_intrinsics: o.allow_intrinsics,
         debug: o.debug,
+        panic_abort: o.panic_abort,
     }
 }

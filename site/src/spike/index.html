@@ -3,117 +3,46 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>jim A2 feasibility spike</title>
+    <title>jim A2 spike — panic=abort run</title>
     <!-- Cross-origin isolation for Wasmer's threaded runtime (SharedArrayBuffer).
-         GitHub Pages can't set COOP/COEP headers, so a service worker injects
-         them. credentialless mode lets the cross-origin CDN + registry load
-         without needing CORP headers on them. Must load first, same-origin. -->
+         credentialless so the cross-origin CDN/registry still load. -->
     <script>
-      // coi-serviceworker calls this as a function — must be () => bool, not a bool.
       window.coi = { coepCredentialless: () => true };
     </script>
     <script src="coi-serviceworker.js"></script>
     <style>
-      body {
-        font-family: system-ui, sans-serif;
-        background: #1e1f1c;
-        color: #f8f8f2;
-        margin: 0;
-        padding: 1.5rem;
-        line-height: 1.5;
-      }
-      h1 {
-        font-size: 1.2rem;
-      }
-      .muted {
-        color: #75715e;
-      }
-      button {
-        background: #a6e22e;
-        color: #1e1f1c;
-        border: 0;
-        border-radius: 4px;
-        padding: 0.5rem 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        margin: 0.25rem 0.5rem 0.25rem 0;
-      }
-      button:disabled {
-        opacity: 0.5;
-        cursor: default;
-      }
-      pre {
-        background: #272822;
-        border: 1px solid #3b3a32;
-        border-radius: 6px;
-        padding: 0.75rem 1rem;
-        overflow: auto;
-        white-space: pre-wrap;
-        font-size: 13px;
-      }
-      .ok {
-        color: #a6e22e;
-      }
-      .err {
-        color: #f92672;
-      }
-      code {
-        color: #e6db74;
-      }
-      section {
-        border-top: 1px solid #3b3a32;
-        margin-top: 1.5rem;
-        padding-top: 1rem;
-      }
+      body { font-family: system-ui, sans-serif; background: #1e1f1c; color: #f8f8f2; margin: 0; padding: 1.5rem; line-height: 1.5; }
+      h1 { font-size: 1.2rem; }
+      .muted { color: #75715e; }
+      button { background: #a6e22e; color: #1e1f1c; border: 0; border-radius: 4px; padding: 0.5rem 1rem; font-weight: 600; cursor: pointer; }
+      button:disabled { opacity: 0.5; cursor: default; }
+      pre { background: #272822; border: 1px solid #3b3a32; border-radius: 6px; padding: 0.75rem 1rem; overflow: auto; white-space: pre-wrap; font-size: 13px; }
+      .ok { color: #a6e22e; }
+      .err { color: #f92672; }
+      section { border-top: 1px solid #3b3a32; margin-top: 1.5rem; padding-top: 1rem; }
     </style>
   </head>
   <body>
-    <h1>jim &mdash; A2 feasibility spike</h1>
+    <h1>jim &mdash; A2 spike (panic=abort run)</h1>
     <p class="muted">
-      Compiles C to WebAssembly in your browser with
-      <code>@wasmer/sdk</code>'s <code>clang/clang</code>, then runs it and
-      captures stdout. Testing whether jim's real generated C &mdash;
-      <strong>stdio + setjmp/longjmp</strong> &mdash; runs client-side. First
-      run downloads clang (~100&nbsp;MB uncompressed, one time; be patient).
+      Compiles jim's <strong>panic=abort</strong> generated C (no setjmp) with
+      Wasmer's clang, then runs it on Wasmer's engine and captures stdout.
+      First run downloads clang (~100&nbsp;MB, one time).
     </p>
 
-    <p>
-      Cross-origin isolated:
-      <strong id="coi-status">checking…</strong>
-      <span class="muted" id="coi-hint"></span>
-    </p>
-
-    <button id="run-jim">1 &nbsp;Run jim program (stdio + setjmp/longjmp)</button>
-    <button id="run-libm">2 &nbsp;Run libm test (sqrt/sin, for the future)</button>
+    <p>Cross-origin isolated: <strong id="coi">checking…</strong></p>
+    <button id="run" disabled>Compile &amp; run</button>
 
     <section>
       <strong>Log</strong>
       <pre id="log">idle.</pre>
     </section>
-
     <section>
-      <strong>Test 1 &mdash; jim program</strong>
-      <p class="muted">
-        Compiles the real C jimc emitted for a program that prints, then
-        triggers and <em>catches</em> a bounds panic (that catch is
-        setjmp/longjmp). Expected stdout:
-      </p>
-      <pre class="muted">hello from jim
-caught: Vector index out of bounds.
-done</pre>
       <strong>clang stderr</strong>
-      <pre id="jim-cc">&mdash;</pre>
+      <pre id="cc">&mdash;</pre>
       <strong>program stdout</strong>
-      <pre id="jim-out">&mdash;</pre>
-    </section>
-
-    <section>
-      <strong>Test 2 &mdash; libm</strong>
-      <p class="muted">Plain C calling <code>sqrt</code>/<code>sin</code> (proves <code>-lm</code> links, for when the std math wrappers are implemented).</p>
-      <strong>clang stderr</strong>
-      <pre id="libm-cc">&mdash;</pre>
-      <strong>program stdout</strong>
-      <pre id="libm-out">&mdash;</pre>
+      <pre id="out" class="ok">&mdash;</pre>
+      <p class="muted">Expected: <code>hello from jim</code> then <code>sum = 10</code>, exit 0.</p>
     </section>
 
     <script type="module">
@@ -122,197 +51,62 @@ done</pre>
         Wasmer,
         Directory,
       } from "https://unpkg.com/@wasmer/sdk@0.8.0-beta.1/dist/index.mjs";
-      // We compile with Wasmer's clang, but RUN the output on the browser's
-      // native WebAssembly engine (which supports wasm exception-handling, and
-      // therefore setjmp/longjmp) via this WASI shim. Wasmer's own SDK engine
-      // can't instantiate EH modules — that was the "unreachable" crash.
-      import {
-        WASI,
-        OpenFile,
-        File as WasiFile,
-        ConsoleStdout,
-        WASIProcExit,
-      } from "https://esm.sh/@bjorn3/browser_wasi_shim@0.4.2";
 
       const logEl = document.getElementById("log");
-      const jimBtn = document.getElementById("run-jim");
-      const libmBtn = document.getElementById("run-libm");
+      const runBtn = document.getElementById("run");
+      const coiEl = document.getElementById("coi");
 
-      // The key signal: without this true, Wasmer's worker can't spawn.
-      const coiEl = document.getElementById("coi-status");
-      const coiHint = document.getElementById("coi-hint");
       if (window.crossOriginIsolated) {
         coiEl.textContent = "true";
         coiEl.className = "ok";
       } else {
-        coiEl.textContent = "false";
+        coiEl.textContent = "false (hard-reload once if it stays)";
         coiEl.className = "err";
-        coiHint.textContent =
-          " — if this stays false, hard-reload once (the service worker needs a reload to take effect).";
       }
 
-      function log(msg, cls) {
-        const line = cls ? `<span class="${cls}">${msg}</span>` : msg;
-        logEl.innerHTML += "\n" + line;
+      function log(m, cls) {
+        logEl.innerHTML += "\n" + (cls ? `<span class="${cls}">${m}</span>` : m);
       }
 
-      let clang = null;
-
-      async function getClang() {
-        if (clang) return clang;
-        log("Initializing @wasmer/sdk…");
-        await init();
-        log("Fetching clang/clang (large; one-time download)…");
-        clang = await Wasmer.fromRegistry("clang/clang");
-        log("clang ready.", "ok");
-        return clang;
-      }
-
-      // Compile `source` to wasm, then run it. Returns {ccStderr, stdout, stderr, ok}.
-      async function compileAndRun(source, filename, extraArgs) {
-        const cc = await getClang();
-        const project = new Directory();
-        await project.writeFile(filename, source);
-
-        const wasmName = filename.replace(/\.c$/, ".wasm");
-        log(`Compiling ${filename} → ${wasmName} …`);
-        const cinst = await cc.entrypoint.run({
-          args: [
-            `/project/${filename}`,
-            "-o",
-            `/project/${wasmName}`,
-            ...extraArgs,
-          ],
-          mount: { "/project": project },
-        });
-        const cout = await cinst.wait();
-        const ccStderr = cout.stderr || "";
-        if (!cout.ok) {
-          log(`clang failed (exit ${cout.code}).`, "err");
-          return { ok: false, ccStderr, stdout: "", stderr: "" };
-        }
-        log("Compiled. Inspecting the produced module's imports…");
-        const wasmBytes = await project.readFile(wasmName);
-        const mod = await WebAssembly.compile(wasmBytes);
-
-        // What does the module import, and from which modules? This tells us
-        // exactly which setjmp runtime helpers (if any) are undefined.
-        const byMod = {};
-        for (const im of WebAssembly.Module.imports(mod)) {
-          (byMod[im.module] ||= []).push(`${im.name}:${im.kind}`);
-        }
-        const importsText = JSON.stringify(byMod, null, 1);
-        log("Module imports:\n" + importsText);
-
-        // Capture stdout through the WASI shim's fd hooks.
-        let out = "";
-        const fds = [
-          new OpenFile(new WasiFile([])), // fd 0: stdin
-          ConsoleStdout.lineBuffered((m) => (out += m + "\n")), // fd 1: stdout
-          ConsoleStdout.lineBuffered((m) => (out += "[stderr] " + m + "\n")), // fd 2
-        ];
-        const wasiInst = new WASI([], [], fds);
-
-        let runErr = "";
+      runBtn.addEventListener("click", async () => {
+        runBtn.disabled = true;
         try {
-          const { instance } = await WebAssembly.instantiate(mod, {
-            wasi_snapshot_preview1: wasiInst.wasiImport,
+          log("Initializing @wasmer/sdk…");
+          await init();
+          log("Fetching clang/clang (one-time large download)…");
+          const clang = await Wasmer.fromRegistry("clang/clang");
+          log("clang ready.", "ok");
+
+          const project = new Directory();
+          const src = await (await fetch("./spike_run.c")).text();
+          await project.writeFile("prog.c", src);
+          log(`Compiling prog.c (${src.length} bytes) — no setjmp flags…`);
+
+          const cinst = await clang.entrypoint.run({
+            args: ["/project/prog.c", "-o", "/project/prog.wasm", "-lm"],
+            mount: { "/project": project },
           });
-          let exitCode = 0;
-          try {
-            const rc = wasiInst.start(instance);
-            if (typeof rc === "number") exitCode = rc;
-          } catch (e) {
-            if (e instanceof WASIProcExit) exitCode = e.code;
-            else throw e;
+          const cout = await cinst.wait();
+          document.getElementById("cc").textContent = cout.stderr || "(none)";
+          if (!cout.ok) {
+            log(`clang failed (exit ${cout.code}).`, "err");
+            return;
           }
-          log(`Program exited ${exitCode}.`, exitCode === 0 ? "ok" : "err");
-        } catch (e) {
-          runErr = e && e.message ? e.message : String(e);
-          log("Instantiate/run failed: " + runErr, "err");
-        }
+          log("Compiled. Running on Wasmer's engine…");
 
-        // Report imports either way so we can see what's needed.
-        const report =
-          "=== module imports ===\n" +
-          importsText +
-          "\n\n=== run ===\n" +
-          (runErr ? "ERROR: " + runErr : out || "(no stdout)");
-        return { ok: true, ccStderr, stdout: report, stderr: "" };
-      }
-
-      // clang-16's wasi-libc keeps setjmp/longjmp INSIDE libc (the separate
-      // libsetjmp.a is a newer wasi-sdk split), so we try combos in order and
-      // stop at the first that compiles AND runs. clang stays cached, so the
-      // extra attempts are cheap.
-      const FLAG_SETS = [
-        { label: "sjlj, no -lsetjmp", args: ["-mllvm", "-wasm-enable-sjlj", "-lm"] },
-        { label: "-fwasm-exceptions + sjlj", args: ["-fwasm-exceptions", "-mllvm", "-wasm-enable-sjlj", "-lm"] },
-        { label: "sjlj + -lsetjmp", args: ["-mllvm", "-wasm-enable-sjlj", "-lsetjmp", "-lm"] },
-        { label: "no flags (baseline)", args: ["-lm"] },
-      ];
-
-      jimBtn.addEventListener("click", async () => {
-        jimBtn.disabled = true;
-        libmBtn.disabled = true;
-        try {
-          log("\n--- Test 1: jim program (trying flag combos) ---");
-          const source = await (await fetch("./spike.c")).text();
-          log(`Fetched spike.c (${source.length} bytes).`);
-
-          let ccReport = "";
-          let ran = false;
-          for (const fs of FLAG_SETS) {
-            log(`\n> ${fs.label}  [${fs.args.join(" ")}]`);
-            const r = await compileAndRun(source, "spike.c", fs.args);
-            ccReport +=
-              `### ${fs.label}  [${fs.args.join(" ")}]\n` +
-              (r.ok ? "(compiled OK)\n\n" : (r.ccStderr || "(no stderr)") + "\n\n");
-            document.getElementById("jim-cc").textContent = ccReport;
-            if (r.ok) {
-              document.getElementById("jim-out").textContent =
-                (r.stdout || "(no stdout)") +
-                (r.stderr ? "\n[stderr]\n" + r.stderr : "");
-              log(`"${fs.label}" COMPILED + RAN.`, "ok");
-              ran = true;
-              break;
-            }
-            log(`"${fs.label}" failed to compile.`, "err");
-          }
-          if (!ran)
-            log("No combo produced a runnable wasm — see clang stderr above.", "err");
+          const wasm = await project.readFile("prog.wasm");
+          const mod = await Wasmer.fromFile(wasm);
+          const rres = await mod.entrypoint.run();
+          const rout = await rres.wait();
+          document.getElementById("out").textContent =
+            (rout.stdout || "(no stdout)") +
+            (rout.stderr ? "\n[stderr]\n" + rout.stderr : "");
+          log(`Program exited ${rout.code}.`, rout.code === 0 ? "ok" : "err");
         } catch (e) {
           log("Exception: " + (e && e.message ? e.message : e), "err");
           console.error(e);
         } finally {
-          jimBtn.disabled = false;
-          libmBtn.disabled = false;
-        }
-      });
-
-      libmBtn.addEventListener("click", async () => {
-        jimBtn.disabled = true;
-        libmBtn.disabled = true;
-        try {
-          log("\n--- Test 2: libm ---");
-          const source = `#include <stdio.h>
-#include <math.h>
-int main(void) {
-    printf("sqrt(2) = %f\\n", sqrt(2.0));
-    printf("sin(1)  = %f\\n", sin(1.0));
-    return 0;
-}
-`;
-          const r = await compileAndRun(source, "libm.c", ["-lm"]);
-          document.getElementById("libm-cc").textContent = r.ccStderr || "(none)";
-          document.getElementById("libm-out").textContent =
-            (r.stdout || "(no stdout)") + (r.stderr ? "\n[stderr]\n" + r.stderr : "");
-        } catch (e) {
-          log("Exception: " + (e && e.message ? e.message : e), "err");
-          console.error(e);
-        } finally {
-          jimBtn.disabled = false;
-          libmBtn.disabled = false;
+          runBtn.disabled = false;
         }
       });
     </script>

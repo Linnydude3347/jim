@@ -49,7 +49,7 @@ function main() -> Integer {
         .to_string(),
     );
 
-    let c = compile_to_c("main.j", files, Some("std".to_string()), false, false)
+    let c = compile_to_c("main.j", files, Some("std".to_string()), false, false, false)
         .expect("in-memory compile should succeed against fake_std");
 
     // A jim `main` lowers to a C `main`, and the runtime string helper appears.
@@ -90,9 +90,50 @@ function main() -> Integer {
         .to_string(),
     );
 
-    let c = compile_to_c("main.j", files, Some("std".to_string()), false, false)
+    let c = compile_to_c("main.j", files, Some("std".to_string()), false, false, false)
         .expect("in-memory compile of a user class with operators should succeed");
     assert!(c.contains("main"), "generated C should define main");
+}
+
+#[test]
+fn panic_abort_mode_strips_setjmp() {
+    // The browser playground's run path compiles with panic_abort = true so the
+    // generated C has no setjmp/longjmp (unavailable on that wasm toolchain).
+    let mut files = fake_std_map();
+    files.insert(
+        "main.j".to_string(),
+        r#"function main() -> Integer {
+    try {
+        var x: Integer = 1;
+    } catch (e: Exception) {
+        var y: Integer = 2;
+    }
+    return 0;
+}
+"#
+        .to_string(),
+    );
+
+    // Normal codegen emits the setjmp handler for try/catch.
+    let normal =
+        compile_to_c("main.j", files.clone(), Some("std".to_string()), false, false, false)
+            .expect("normal compile");
+    assert!(
+        normal.contains("setjmp(jim_h") && normal.contains("rt_handler jim_h"),
+        "normal build should emit a setjmp handler for try/catch"
+    );
+    assert!(!normal.contains("#define JIM_PANIC_ABORT"), "normal build sets no abort define");
+
+    // Abort mode: the define activates the runtime guards, and codegen emits NO
+    // setjmp call / handler for try/catch (the runtime's guarded text remains,
+    // but the C preprocessor strips it when JIM_PANIC_ABORT is defined).
+    let abort = compile_to_c("main.j", files, Some("std".to_string()), false, false, true)
+        .expect("panic=abort compile");
+    assert!(abort.contains("#define JIM_PANIC_ABORT 1"), "abort build sets the define");
+    assert!(
+        !abort.contains("setjmp(jim_h") && !abort.contains("rt_handler jim_h"),
+        "panic=abort build must not emit a setjmp handler"
+    );
 }
 
 #[test]
@@ -108,7 +149,7 @@ fn a_type_error_comes_back_rendered() {
         .to_string(),
     );
 
-    let err = compile_to_c("main.j", files, Some("std".to_string()), false, false)
+    let err = compile_to_c("main.j", files, Some("std".to_string()), false, false, false)
         .expect_err("returning a String from an Integer function should fail");
     assert!(
         err.contains("main.j"),
