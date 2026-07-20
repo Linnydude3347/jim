@@ -28,7 +28,7 @@ jobs:
     env:
       MDBOOK_VERSION: "0.4.40"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install mdBook
         run: |
@@ -56,7 +56,7 @@ jobs:
             --out-dir "$GITHUB_WORKSPACE/site/book/playground/pkg"
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: site/book
 
@@ -69,4 +69,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
