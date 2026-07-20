@@ -191,32 +191,54 @@ done</pre>
           log(`clang failed (exit ${cout.code}).`, "err");
           return { ok: false, ccStderr, stdout: "", stderr: "" };
         }
-        log("Compiled. Running on the browser's native WebAssembly engine…");
-
+        log("Compiled. Inspecting the produced module's imports…");
         const wasmBytes = await project.readFile(wasmName);
+        const mod = await WebAssembly.compile(wasmBytes);
 
-        // Capture stdout/stderr through the WASI shim's fd hooks.
+        // What does the module import, and from which modules? This tells us
+        // exactly which setjmp runtime helpers (if any) are undefined.
+        const byMod = {};
+        for (const im of WebAssembly.Module.imports(mod)) {
+          (byMod[im.module] ||= []).push(`${im.name}:${im.kind}`);
+        }
+        const importsText = JSON.stringify(byMod, null, 1);
+        log("Module imports:\n" + importsText);
+
+        // Capture stdout through the WASI shim's fd hooks.
         let out = "";
         const fds = [
-          new OpenFile(new WasiFile([])), // fd 0: stdin (empty)
+          new OpenFile(new WasiFile([])), // fd 0: stdin
           ConsoleStdout.lineBuffered((m) => (out += m + "\n")), // fd 1: stdout
           ConsoleStdout.lineBuffered((m) => (out += "[stderr] " + m + "\n")), // fd 2
         ];
         const wasiInst = new WASI([], [], fds);
-        const { instance } = await WebAssembly.instantiate(wasmBytes, {
-          wasi_snapshot_preview1: wasiInst.wasiImport,
-        });
 
-        let exitCode = 0;
+        let runErr = "";
         try {
-          const rc = wasiInst.start(instance);
-          if (typeof rc === "number") exitCode = rc;
+          const { instance } = await WebAssembly.instantiate(mod, {
+            wasi_snapshot_preview1: wasiInst.wasiImport,
+          });
+          let exitCode = 0;
+          try {
+            const rc = wasiInst.start(instance);
+            if (typeof rc === "number") exitCode = rc;
+          } catch (e) {
+            if (e instanceof WASIProcExit) exitCode = e.code;
+            else throw e;
+          }
+          log(`Program exited ${exitCode}.`, exitCode === 0 ? "ok" : "err");
         } catch (e) {
-          if (e instanceof WASIProcExit) exitCode = e.code;
-          else throw e;
+          runErr = e && e.message ? e.message : String(e);
+          log("Instantiate/run failed: " + runErr, "err");
         }
-        log(`Program exited ${exitCode}.`, exitCode === 0 ? "ok" : "err");
-        return { ok: true, ccStderr, stdout: out, stderr: "" };
+
+        // Report imports either way so we can see what's needed.
+        const report =
+          "=== module imports ===\n" +
+          importsText +
+          "\n\n=== run ===\n" +
+          (runErr ? "ERROR: " + runErr : out || "(no stdout)");
+        return { ok: true, ccStderr, stdout: report, stderr: "" };
       }
 
       // clang-16's wasi-libc keeps setjmp/longjmp INSIDE libc (the separate
