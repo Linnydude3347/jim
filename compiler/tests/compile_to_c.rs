@@ -160,6 +160,29 @@ fn dce_prunes_unused_stdlib() {
 }
 
 #[test]
+fn no_double_return_and_minimal_runtime() {
+    let mut files = fake_std_map();
+    files.insert(
+        "main.j".to_string(),
+        "function main() -> Integer { return 0; }\n".to_string(),
+    );
+    let c = compile_to_c("main.j", files, Some("std".to_string()), false, false, false)
+        .expect("tiny compiles");
+
+    // The explicit `return 0` is not duplicated by an implicit trailing return.
+    assert_eq!(
+        c.matches("return INT64_C(0)").count(),
+        1,
+        "expected exactly one return in jim_user_main"
+    );
+
+    // A do-nothing program pulls in none of the optional runtime families.
+    for absent in ["rt_panic(", "rt_opt_i64_some", "rt_f64_sqrt", "jmp_buf", "rt_i64_add"] {
+        assert!(!c.contains(absent), "tiny build should not contain `{absent}`");
+    }
+}
+
+#[test]
 fn a_type_error_comes_back_rendered() {
     // No filesystem, but diagnostics still render with a path:line:col header.
     let mut files = fake_std_map();

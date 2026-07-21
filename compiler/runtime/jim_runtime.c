@@ -8,8 +8,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef JIM_RT_PANIC
 #ifndef JIM_PANIC_ABORT
-#include <setjmp.h> /* try/catch unwinding; omitted in panic=abort builds */
+#include <setjmp.h> /* try/catch handler stack; omitted in panic=abort builds */
+#endif
 #endif
 #ifdef JIM_RT_FLOATMATH
 #include <math.h> /* transcendental float intrinsics only */
@@ -82,6 +84,7 @@ static void rt_shutdown(void) {
  * stack: every panic prints and exits, and codegen omits try/catch handlers.
  */
 
+#ifdef JIM_RT_PANIC
 #ifndef JIM_PANIC_ABORT
 typedef struct rt_handler {
     jmp_buf buf;
@@ -92,6 +95,7 @@ typedef struct rt_handler {
 static rt_handler* rt_handlers = NULL;
 static jim_str rt_current_exc;
 #endif
+#endif
 
 /* ---- stack traces ----
  * Debug builds (`jimc run`, `jimc build --debug`) maintain a shadow stack:
@@ -100,6 +104,12 @@ static jim_str rt_current_exc;
  * exactly as before. The frames beyond the cap are counted, not stored.
  */
 
+/* Shadow-stack depth: always defined (the try/catch handler restores it and
+ * codegen snapshots it at try entry). The frame array and trace printing are
+ * debug-only; in release this stays 0 and nothing reads it. */
+static int rt_frame_top = 0;
+
+#ifdef JIM_RT_DEBUG
 typedef struct {
     const char* file;
     const char* fn;
@@ -108,7 +118,6 @@ typedef struct {
 
 #define RT_MAX_FRAMES 256
 static rt_frame rt_frames[RT_MAX_FRAMES];
-static int rt_frame_top = 0;
 
 static void rt_push_frame(const char* file, const char* fn) {
     if (rt_frame_top < RT_MAX_FRAMES) {
@@ -139,7 +148,9 @@ static void rt_print_trace(void) {
         fprintf(stderr, "  at %s (%s:%d)\n", rt_frames[i].fn, rt_frames[i].file, (int)rt_frames[i].line);
     }
 }
+#endif /* JIM_RT_DEBUG */
 
+#ifdef JIM_RT_PANIC
 static void rt_panic(jim_str msg) {
 #ifndef JIM_PANIC_ABORT
     if (rt_handlers != NULL) {
@@ -153,7 +164,9 @@ static void rt_panic(jim_str msg) {
     fputs("jim panic: ", stderr);
     fwrite(msg.ptr, 1, (size_t)msg.len, stderr);
     fputc('\n', stderr);
+#ifdef JIM_RT_DEBUG
     if (rt_frame_top > 0) rt_print_trace();
+#endif
     exit(1);
 }
 
@@ -175,17 +188,21 @@ static void rt_panic_at(jim_str msg, const char* file, int line, const char* fn)
     fputs("jim panic: ", stderr);
     fwrite(msg.ptr, 1, (size_t)msg.len, stderr);
     fputc('\n', stderr);
+#ifdef JIM_RT_DEBUG
     if (rt_frame_top > 0) {
         rt_print_trace();
-    } else {
-        fprintf(stderr, "  at %s:%d (in %s)\n", file, line, fn);
+        exit(1);
     }
+#endif
+    fprintf(stderr, "  at %s:%d (in %s)\n", file, line, fn);
     exit(1);
 }
 
 /* the message of the exception being handled (Exception's repr IS the message) */
 static jim_str rt_exc_msg(jim_str e) { return e; }
+#endif /* JIM_RT_PANIC */
 
+#ifdef JIM_RT_OPT
 /* optional reference types are nullable pointers; using None panics */
 static void* rt_nonnull(void* p, const char* tyname) {
     if (p == NULL) {
@@ -227,12 +244,14 @@ JIM_DEFINE_OPT(f64, double, "Float")
 JIM_DEFINE_OPT(bool, bool, "Bool")
 JIM_DEFINE_OPT(char, uint8_t, "Char")
 JIM_DEFINE_OPT(str, jim_str, "String")
+#endif /* JIM_RT_OPT */
 
 /* ---- RawBuffer<T> ----
  * Unchecked raw storage for the std library's Array/Vector. Bounds checks
  * and growth logic live in jim code, not here. The compiler emits one
  * JIM_DEFINE_BUF(sfx, T) line per element type in use.
  */
+#ifdef JIM_RT_BUF
 #define JIM_DEFINE_BUF(sfx, T) \
     typedef struct { T* data; int64_t cap; } jim_buf_##sfx; \
     static jim_buf_##sfx jim_buf_##sfx##_alloc(int64_t n) { \
@@ -245,6 +264,7 @@ JIM_DEFINE_OPT(str, jim_str, "String")
     static T jim_buf_##sfx##_get(jim_buf_##sfx b, int64_t i) { return b.data[i]; } \
     static void jim_buf_##sfx##_set(jim_buf_##sfx b, int64_t i, T v) { b.data[i] = v; } \
     static int64_t jim_buf_##sfx##_capacity(jim_buf_##sfx b) { return b.cap; }
+#endif /* JIM_RT_BUF */
 
 /* ---- Integer (checked 64-bit arithmetic) ---- */
 #ifdef JIM_RT_INT
