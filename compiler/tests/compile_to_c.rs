@@ -151,15 +151,60 @@ fn dce_prunes_unused_stdlib() {
     assert!(!c.contains("jim_m_Float_plus"), "unused Float.plus should be pruned");
     assert!(!c.contains("jim_m_Integer_times"), "unused Integer.times should be pruned");
 
-    // A program that adds Integers keeps Integer.plus (operators desugar to it).
+    // Adding two variables desugars to Integer.plus, which is a trivial
+    // forwarder to @i64_add - so the call site inlines to rt_i64_add and the
+    // one-line wrapper method is never emitted.
     let mut files2 = fake_std_map();
     files2.insert(
         "main.j".to_string(),
-        "function main() -> Integer { var x: Integer = 1 + 2; return x; }\n".to_string(),
+        "function main() -> Integer { var a: Integer = 1; var b: Integer = 2;\n var x: Integer = a + b; return x; }\n"
+            .to_string(),
     );
     let c2 = compile_to_c("main.j", files2, Some("std".to_string()), false, false, false)
         .expect("add compiles");
-    assert!(c2.contains("jim_m_Integer_plus"), "used Integer.plus must be emitted");
+    assert!(c2.contains("rt_i64_add"), "a + b must call the intrinsic directly");
+    assert!(!c2.contains("jim_m_Integer_plus"), "the inlined forwarder must not be emitted");
+}
+
+#[test]
+fn literals_fold_but_overflow_still_panics() {
+    // `1 + 2` folds at compile time: no arithmetic runtime at all.
+    let mut files = fake_std_map();
+    files.insert(
+        "main.j".to_string(),
+        "function main() -> Integer { var x: Integer = 1 + 2; return x; }\n".to_string(),
+    );
+    let c = compile_to_c("main.j", files, Some("std".to_string()), false, false, false)
+        .expect("folded add compiles");
+    assert!(c.contains("INT64_C(3)"), "1 + 2 should fold to 3");
+    assert!(!c.contains("rt_i64_add"), "a folded add needs no runtime call");
+
+    // A literal overflow does NOT fold - it stays a runtime call that panics
+    // when it executes (by design: literal overflow is a runtime panic).
+    let mut files2 = fake_std_map();
+    files2.insert(
+        "main.j".to_string(),
+        "function main() -> Integer { var x: Integer = 9223372036854775807 + 1; return 0; }\n"
+            .to_string(),
+    );
+    let c2 = compile_to_c("main.j", files2, Some("std".to_string()), false, false, false)
+        .expect("overflowing add still compiles");
+    assert!(
+        c2.contains("rt_i64_add(INT64_C(9223372036854775807), INT64_C(1))"),
+        "an overflowing literal add must remain a runtime call"
+    );
+
+    // String building from literals folds through the whole chain.
+    let mut files3 = fake_std_map();
+    files3.insert(
+        "main.j".to_string(),
+        "#import <io>\nfunction main() -> Integer { print(\"n = \" + (2 + 3).to_string()); return 0; }\n"
+            .to_string(),
+    );
+    let c3 = compile_to_c("main.j", files3, Some("std".to_string()), false, false, false)
+        .expect("folded print compiles");
+    assert!(c3.contains("\"n = 5\""), "literal string building should fold to one literal");
+    assert!(!c3.contains("rt_str_concat"), "no runtime concat for folded literals");
 }
 
 #[test]

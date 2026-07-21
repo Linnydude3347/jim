@@ -11,6 +11,7 @@ pub mod driver;
 pub mod errors;
 pub mod lexer;
 pub mod loader;
+pub mod opt;
 pub mod parser;
 pub mod sema;
 pub mod token;

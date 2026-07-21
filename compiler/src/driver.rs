@@ -3,6 +3,7 @@ use crate::codegen;
 use crate::errors::{self, JimError};
 use crate::lexer::Lexer;
 use crate::loader::{Loader, MapLoader};
+use crate::opt;
 use crate::parser::Parser;
 use crate::sema;
 use std::collections::{HashMap, HashSet};
@@ -164,7 +165,8 @@ pub fn compile_to_c(
     panic_abort: bool,
 ) -> Result<String, String> {
     let loader = MapLoader::new(files, std_root);
-    let (program, file_names) = load_program(&loader, entry, allow_intrinsics, true)?;
+    let (mut program, file_names) = load_program(&loader, entry, allow_intrinsics, true)?;
+    opt::optimize(&mut program);
     Ok(codegen::generate(&program, &file_names, debug, panic_abort))
 }
 
@@ -267,12 +269,13 @@ pub fn default_output(input: &Path) -> PathBuf {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn build(opts: &Options) -> Result<PathBuf, String> {
     let loader = FsLoader::new(find_std_root(opts));
-    let (program, file_names) = load_program(
+    let (mut program, file_names) = load_program(
         &loader,
         &opts.input.to_string_lossy(),
         opts.allow_intrinsics,
         true,
     )?;
+    opt::optimize(&mut program);
     let c_source = codegen::generate(&program, &file_names, opts.debug, opts.panic_abort);
 
     if let Some(c_path) = &opts.emit_c {
