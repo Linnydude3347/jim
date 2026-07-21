@@ -1,5 +1,7 @@
 /* ==== jim runtime v0 ====
- * Embedded verbatim at the top of every generated translation unit.
+ * Embedded at the top of every generated translation unit. jimc evaluates the
+ * #ifdef JIM_RT_* feature gates itself and emits only the blocks the program
+ * reaches, so trivial programs carry a trivial runtime.
  * Memory model: bump arena, freed in one sweep at exit (jim has no free()).
  * Every rt_* function backs a compiler intrinsic (see docs/DESIGN.md section 6).
  */
@@ -20,6 +22,11 @@
 #include <errno.h> /* @str_to_i64 / @str_to_f64 only */
 #endif
 
+#ifdef JIM_RT_STR
+/* ---- strings (immutable byte views) ----
+ * Emitted whenever the program touches a String in any way: a literal, a
+ * String-typed declaration, or a runtime block whose helpers traffic in
+ * jim_str. */
 typedef struct {
     const char* ptr;
     int64_t len;
@@ -31,8 +38,13 @@ static jim_str rt_str_lit(const char* p, int64_t n) {
     s.len = n;
     return s;
 }
+#endif /* JIM_RT_STR */
 
-/* ---- arena ---- */
+#ifdef JIM_RT_ALLOC
+/* ---- arena ----
+ * Emitted whenever anything allocates: a constructor, a container buffer, or
+ * a runtime helper that builds a new string. Allocation-free programs carry
+ * no allocator at all (and main skips rt_init/rt_shutdown). */
 
 typedef struct rt_block {
     struct rt_block* next;
@@ -74,7 +86,9 @@ static void rt_shutdown(void) {
     }
     rt_arena = NULL;
 }
+#endif /* JIM_RT_ALLOC */
 
+#ifdef JIM_RT_PANIC
 /* ---- panics & try/catch ----
  * Panics unwind to the innermost try (setjmp/longjmp handler stack);
  * uncaught, they print and exit(1).
@@ -83,8 +97,6 @@ static void rt_shutdown(void) {
  * where wasm setjmp/longjmp isn't portably available) there is no handler
  * stack: every panic prints and exits, and codegen omits try/catch handlers.
  */
-
-#ifdef JIM_RT_PANIC
 #ifndef JIM_PANIC_ABORT
 typedef struct rt_handler {
     jmp_buf buf;
@@ -97,19 +109,20 @@ static jim_str rt_current_exc;
 #endif
 #endif
 
+#ifdef JIM_RT_FRAMETOP
+/* Shadow-stack depth: jimc defines JIM_RT_FRAMETOP whenever PANIC or DEBUG is
+ * on (the try/catch handler restores it; debug frames maintain it). In a
+ * release build with panics it stays 0 and only the handler touches it. */
+static int rt_frame_top = 0;
+#endif /* JIM_RT_FRAMETOP */
+
+#ifdef JIM_RT_DEBUG
 /* ---- stack traces ----
  * Debug builds (`jimc run`, `jimc build --debug`) maintain a shadow stack:
  * push/pop per jim function, plus a line store before each call. Release
  * builds emit none of these calls - rt_frame_top stays 0 and panics print
  * exactly as before. The frames beyond the cap are counted, not stored.
  */
-
-/* Shadow-stack depth: always defined (the try/catch handler restores it and
- * codegen snapshots it at try entry). The frame array and trace printing are
- * debug-only; in release this stays 0 and nothing reads it. */
-static int rt_frame_top = 0;
-
-#ifdef JIM_RT_DEBUG
 typedef struct {
     const char* file;
     const char* fn;
@@ -246,12 +259,12 @@ JIM_DEFINE_OPT(char, uint8_t, "Char")
 JIM_DEFINE_OPT(str, jim_str, "String")
 #endif /* JIM_RT_OPT */
 
+#ifdef JIM_RT_BUF
 /* ---- RawBuffer<T> ----
  * Unchecked raw storage for the std library's Array/Vector. Bounds checks
  * and growth logic live in jim code, not here. The compiler emits one
  * JIM_DEFINE_BUF(sfx, T) line per element type in use.
  */
-#ifdef JIM_RT_BUF
 #define JIM_DEFINE_BUF(sfx, T) \
     typedef struct { T* data; int64_t cap; } jim_buf_##sfx; \
     static jim_buf_##sfx jim_buf_##sfx##_alloc(int64_t n) { \
@@ -266,8 +279,8 @@ JIM_DEFINE_OPT(str, jim_str, "String")
     static int64_t jim_buf_##sfx##_capacity(jim_buf_##sfx b) { return b.cap; }
 #endif /* JIM_RT_BUF */
 
-/* ---- Integer (checked 64-bit arithmetic) ---- */
 #ifdef JIM_RT_INT
+/* ---- Integer (checked 64-bit arithmetic) ---- */
 
 static int64_t rt_i64_add(int64_t a, int64_t b) {
     int64_t r;
@@ -317,8 +330,8 @@ static jim_str rt_i64_to_string(int64_t v) {
 }
 #endif /* JIM_RT_INT */
 
-/* ---- Float ---- */
 #ifdef JIM_RT_FLOAT
+/* ---- Float ---- */
 
 static double rt_f64_add(double a, double b) { return a + b; }
 static double rt_f64_sub(double a, double b) { return a - b; }
@@ -357,8 +370,8 @@ static jim_str rt_f64_to_string(double v) {
 }
 #endif /* JIM_RT_FLOAT */
 
-/* ---- Bool / Char (a Char is one byte, 0-255) ---- */
 #ifdef JIM_RT_BOOLCHAR
+/* ---- Bool / Char (a Char is one byte, 0-255) ---- */
 
 static bool rt_bool_eq(bool a, bool b) { return a == b; }
 static bool rt_char_eq(uint8_t a, uint8_t b) { return a == b; }
@@ -377,8 +390,8 @@ static jim_str rt_char_to_string(uint8_t c) {
 }
 #endif /* JIM_RT_BOOLCHAR */
 
-/* ---- String ---- */
 #ifdef JIM_RT_STRING
+/* ---- String ---- */
 
 static int64_t rt_str_len(jim_str s) { return s.len; }
 
@@ -456,9 +469,9 @@ static jim_opt_f64 rt_str_to_f64(jim_str s) {
 }
 #endif /* JIM_RT_STRPARSE */
 
+#ifdef JIM_RT_FLOATMATH
 /* ---- Float math (libm; IEEE-permissive - domain errors yield nan/inf,
  * policy such as "None for sqrt of a negative" belongs in jim code) ---- */
-#ifdef JIM_RT_FLOATMATH
 
 static double rt_f64_sqrt(double x) { return sqrt(x); }
 static double rt_f64_cbrt(double x) { return cbrt(x); }
@@ -481,8 +494,8 @@ static bool rt_f64_is_inf(double x) { return isinf(x) != 0; }
 static bool rt_f64_is_finite(double x) { return isfinite(x) != 0; }
 #endif /* JIM_RT_FLOATMATH */
 
-/* ---- Integer bit operations ---- */
 #ifdef JIM_RT_BITOPS
+/* ---- Integer bit operations ---- */
 
 static int64_t rt_i64_and(int64_t a, int64_t b) { return a & b; }
 static int64_t rt_i64_or(int64_t a, int64_t b) { return a | b; }
@@ -500,8 +513,8 @@ static int64_t rt_i64_shr(int64_t a, int64_t b) {
 }
 #endif /* JIM_RT_BITOPS */
 
-/* ---- io ---- */
 #ifdef JIM_RT_IOPRINT
+/* ---- io ---- */
 
 static void rt_print_string(jim_str s) {
     fwrite(s.ptr, 1, (size_t)s.len, stdout);

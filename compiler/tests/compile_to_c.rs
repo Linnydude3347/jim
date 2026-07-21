@@ -55,6 +55,9 @@ function main() -> Integer {
     // A jim `main` lowers to a C `main`, and the runtime string helper appears.
     assert!(c.contains("main"), "generated C should define main");
     assert!(!c.trim().is_empty(), "generated C should be non-empty");
+    // Printing a literal needs strings but never allocates: no arena.
+    assert!(c.contains("rt_str_lit"), "hello needs the string representation");
+    assert!(!c.contains("rt_arena_alloc"), "hello should not carry the arena");
 }
 
 #[test]
@@ -176,8 +179,21 @@ fn no_double_return_and_minimal_runtime() {
         "expected exactly one return in jim_user_main"
     );
 
-    // A do-nothing program pulls in none of the optional runtime families.
-    for absent in ["rt_panic(", "rt_opt_i64_some", "rt_f64_sqrt", "jmp_buf", "rt_i64_add"] {
+    // A do-nothing program pulls in none of the optional runtime families,
+    // no allocator, no string machinery, and no container layouts.
+    for absent in [
+        "rt_panic(",
+        "rt_opt_i64_some",
+        "rt_f64_sqrt",
+        "jmp_buf",
+        "rt_i64_add",
+        "rt_arena_alloc",
+        "rt_init",
+        "jim_str",
+        "rt_frame_top",
+        "JIM_DEFINE_BUF",
+        "struct jim_c_",
+    ] {
         assert!(!c.contains(absent), "tiny build should not contain `{absent}`");
     }
 }
