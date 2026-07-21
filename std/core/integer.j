@@ -59,7 +59,7 @@ class Integer {
     // Return this integer raised to the power `exp`. Does not accept negative
     // exponents. If a negative exponent is passed, zero will be returned.
     public pow(exp: Integer) -> Integer {
-        if (exp < 0) return 0;
+        if (exp < 0) { return 0; }
         var r: Integer = this;
         for (i: Integer = 1; i <= exp; i++) {
             r *= exp;
