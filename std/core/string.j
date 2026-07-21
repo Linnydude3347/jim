@@ -1,5 +1,5 @@
 // NOTE: All string methods return new values. They do not change the original string.
-
+#import <io>
 class String {
 
     // Appends `other` string to this string and returns the result
@@ -232,9 +232,15 @@ class String {
     public replace(target: String, new: String) -> String? {
         if (target.length() > this.length()) { return None; }
         var r: String = "";
-        var end: Integer = this.length() - target.length() - 1;
-        for (i: Integer = 0; i < end; i++) {
-            var s: String = this.substr(i, i + target.length());
+        var end: Integer = this.length() - target.length() + 1;
+        var i: Integer = 0;
+
+        // NOTE: This works for replacing strings at the start or end of the string
+        // TODO: Does not currently work for replacing segments in the middle of the string,
+        // or replacing multiple segments in one string
+        while (i <= end) {
+            var s: String = this.substr(i, i + target.length() - 1);
+            print(s);
             if (i == end - 1) {
                 if (s != target) {
                     r += s;
@@ -245,8 +251,10 @@ class String {
             }
             if (s != target) {
                 r += this[i].to_string();
+                i++;
             } else {
                 r += new;
+                i += new.length() + 1;
             }
         }
         return r;
