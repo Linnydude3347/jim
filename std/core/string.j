@@ -102,10 +102,7 @@ class String {
     // Returns true if all characters in the string are alphanumeric
     public isAlnum() -> Bool {
         for (c: Char in this) {
-            var v: String = c.to_string();
-            if (not v.isAlpha() and not v.isDecimal()) {
-                return false;
-            }
+            if (not c.is_alnum()) { return false; }
         }
         return true;
     }
@@ -113,10 +110,7 @@ class String {
     // Returns true if all characters in the string are in the alphabet
     public isAlpha() -> Bool {
         for (c: Char in this) {
-            var v: Integer = @char_to_i64(c);
-            if (not (v >= 65 and v <= 90) and not (v >= 97 and v <= 122)) {
-                return false;
-            }
+            if (not c.is_alpha()) { return false; }
         }
         return true;
     }
@@ -124,10 +118,7 @@ class String {
     // Returns true if all characters in the string are ascii characters [32, 127]
     public isAscii() -> Bool {
         for (c: Char in this) {
-            var v: Integer = @char_to_i64(c);
-            if (not (v >= 32 and v <= 127)) {
-                return false;
-            }
+            if (not c.is_ascii_printable()) { return false; }
         }
         return true;
     }
@@ -135,10 +126,7 @@ class String {
     // Returns true if all characters in the string are decimals
     public isDecimal() -> Bool {
         for (c: Char in this) {
-            var v: Integer = @char_to_i64(c);
-            if (not (v >= 48 and v <= 57)) {
-                return false;
-            }
+            if (not c.is_digit() or c != '.') { return false; }
         }
         return true;
     }
@@ -146,9 +134,7 @@ class String {
     // Returns true if all characters in the string are lower case
     public isLower() -> Bool {
         for (c: Char in this) {
-            if (c != c.to_lower()) {
-                return false;
-            }
+            if (c != c.to_lower()) { return false; }
         }
         return true;
     }
@@ -156,9 +142,7 @@ class String {
     // Returns true if all characters in the string are whitespaces
     public isSpace() -> Bool {
         for (c: Char in this) {
-            if (c != ' ') {
-                return false;
-            }
+            if (not c.is_space()) { return false; }
         }
         return true;
     }
@@ -166,9 +150,7 @@ class String {
     // Returns true if all characters in the string are upper case
     public isUpper() -> Bool {
         for (c: Char in this) {
-            if (c != c.to_upper()) {
-                return false;
-            }
+            if (c != c.to_upper()) { return false; }
         }
         return true;
     }
@@ -211,26 +193,84 @@ class String {
         
     }
 
-    // Returns this string with leading and trailing whitespace removed.
-    public trim() -> String?{}
+    // Returns this string with leading and trailing whitespace removed. `'  abc  ' => 'abc'`
+    public trim() -> String {
+        return this.rtrim().ltrim();
+    }
 
-    // Returns this string with leading whitespace removed.
-    public ltrim() -> String?{}
+    // Returns this string with leading whitespace removed. `'  abc  ' => 'abc  '`
+    public ltrim() -> String {
+        var index: Integer = 0;
+        while (this[index].is_space()) { index++; }
+        return this.substr(index, this.length() - 1);
+    }
 
-    // Returns this string with trailing whitespace removed.
-    public rtrim() -> String?{}
+    // Returns this string with trailing whitespace removed. `'  abc  ' => '  abc'`
+    public rtrim() -> String {
+        var index: Integer = this.length() - 1;
+        while (this[index].is_space()) { index--; }
+        return this.substr(0, index);
+    }
 
     // Returns this string with every occurrence of `target` replaced by
-    // `new`. Occurrences are found left to right and do not overlap.
-    public replace(target: String, new: String) -> String?{}
+    // `new`. Occurrences are found left to right and do not overlap. This
+    // function is specifically for replacing characters, not strings.
+    public replace_char(target: Char, new: Char) -> String {
+        var r: String = "";
+        for (c: Char in this) {
+            if (c == target) { r += new.to_string(); }
+            else { r += c.to_string(); }
+        }
+        return r;
+    }
+
+    // Returns this string with every occurrence of `target` replaced by
+    // `new`. Occurrences are found left to right and do not overlap. This
+    // function is specifically for replacing strings, not characters.
+    //
+    // If the target string is longer than the source string, None is returned.
+    public replace(target: String, new: String) -> String? {
+        if (target.length() > this.length()) { return None; }
+        var r: String = "";
+        var end: Integer = this.length() - target.length() - 1;
+        for (i: Integer = 0; i < end; i++) {
+            var s: String = this.substr(i, i + target.length());
+            if (i == end - 1) {
+                if (s != target) {
+                    r += s;
+                } else {
+                    r += new;
+                }
+                return r;
+            }
+            if (s != target) {
+                r += this[i].to_string();
+            } else {
+                r += new;
+            }
+        }
+        return r;
+    }
 
     // Returns this string repeated `n` times, e.g. `"ab".repeat(3)` =>
     // "ababab". Does not accept negative counts. If a negative count is
-    // passed, the empty string will be returned.
-    public repeat(n: Integer) -> String?{}
+    // passed, an empty string will be returned.
+    public repeat(n: Integer) -> String {
+        var r: String = "";
+        for (i: Integer = 0; i < n; i++) {
+            r += this;
+        }
+        return r;
+    }
 
     // Returns this string with its characters in reverse order.
-    public reverse() -> String?{}
+    public reverse() -> String {
+        var r: String = "";
+        for (i: Integer = this.length() - 1; i >= 0; i--) {
+            r += this[i].to_string();
+        }
+        return r;
+    }
 
     // Searches the string backwards for `value` and returns the position of
     // the last occurrence (-1 if not found).
@@ -238,10 +278,10 @@ class String {
 
     // Splits this string at newlines and returns the lines. The line breaks
     // themselves are not included in the results.
-    public lines() -> Array<String>?{}
+    public lines() -> Array<String> { return this.split('\n'); }
 
     // Joins `values` into one string with this string between each pair,
-    // e.g. `", ".join(["a", "b", "c"])` => "a, b, c".
+    // e.g. `", ".join(["a", "b", "c"])` => `"a, b, c"`.
     public join(values: Array<String>) -> String?{}
 
     // Returns this string padded on the left with `c` until it is `n`
@@ -275,16 +315,16 @@ class String {
 
     // Strings are compared as if both were lower case, so `"JIM"` equals
     // `"jim"`.
-    public equalsIgnoreCase(other: String) -> Bool?{}
+    public equalsIgnoreCase(other: String) -> Bool { return this.lower() == other.lower(); }
 
     // Intrinsics needed for below functions
 
     // Parses this string as a decimal integer, e.g. `"-42"` => -42. Returns
     // None if the string is not a valid integer.
-    public to_integer() -> Integer?{}
+    public to_integer() -> Integer { return @str_to_i64(this); }
 
     // Parses this string as a decimal number, e.g. `"2.5"` => 2.5. Returns
     // None if the string is not a valid number.
-    public to_float() -> Float?{}
+    public to_float() -> Float { return @str_to_f64(this); }
 
 }
