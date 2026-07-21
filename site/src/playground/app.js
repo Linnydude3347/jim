@@ -217,8 +217,11 @@ const consoleEl = document.getElementById("console");
 const runOutputEl = document.getElementById("run-output");
 const runStatusEl = document.getElementById("run-status");
 const consoleCloseEl = document.getElementById("console-close");
+const toggleCBtn = document.getElementById("toggle-c");
+const mainEl = document.querySelector("main");
 
 let ready = false;
+let showC = false; // the generated C pane is hidden until the user asks for it
 
 function setStatus(text, kind) {
   statusEl.textContent = text;
@@ -267,8 +270,8 @@ async function ensureToolchain() {
   if (clang) return;
   if (!window.crossOriginIsolated) {
     throw new Error(
-      "This embedded preview can't run programs - execution needs cross-origin " +
-        "isolation. Open the playground full-screen (link on the Playground page) to run."
+      "Running needs cross-origin isolation, which this page does not have yet. " +
+        "Reload the page once; if it persists, your browser may not support it."
     );
   }
   setRunStatus("loading C toolchain (~30 MB, one time)...");
@@ -331,6 +334,16 @@ examplesEl.addEventListener("change", () => {
   if (src) {
     editor.setValue(src);
     doCompile();
+  }
+});
+
+toggleCBtn.addEventListener("click", () => {
+  showC = !showC;
+  mainEl.classList.toggle("with-c", showC);
+  toggleCBtn.textContent = showC ? "Hide C" : "Show C";
+  if (showC) {
+    doCompile(); // refresh the C for the current source
+    output.refresh(); // CodeMirror needs a relayout after becoming visible
   }
 });
 

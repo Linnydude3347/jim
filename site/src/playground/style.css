@@ -75,6 +75,13 @@ button:disabled {
   cursor: default;
 }
 
+/* Secondary (outline) button, e.g. the Show/Hide C toggle. */
+.btn-ghost {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid #3b3a32;
+}
+
 select#examples {
   background: var(--panel);
   color: var(--fg);
@@ -130,8 +137,17 @@ select#examples {
 main {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr; /* jim only by default */
   min-height: 0;
+}
+main.with-c {
+  grid-template-columns: 1fr 1fr; /* reveal the generated C */
+}
+#c-pane {
+  display: none;
+}
+main.with-c #c-pane {
+  display: flex;
 }
 
 .pane {
@@ -229,7 +245,7 @@ main {
 }
 
 @media (max-width: 800px) {
-  main {
+  main.with-c {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr 1fr;
   }

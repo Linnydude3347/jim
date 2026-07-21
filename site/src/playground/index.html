@@ -40,6 +40,7 @@
           <option value="generics">Generic functions</option>
         </select>
         <span id="status" class="status">loading...</span>
+        <button id="toggle-c" class="btn-ghost">Show C</button>
         <button id="run" class="btn-run" disabled>Run</button>
       </div>
     </header>
@@ -49,7 +50,7 @@
         <div class="pane-title">your jim <span id="version"></span></div>
         <div id="editor" class="editor"></div>
       </section>
-      <section class="pane">
+      <section class="pane" id="c-pane">
         <div class="pane-title">generated C11</div>
         <div id="output" class="editor"></div>
         <pre id="error" class="error" hidden></pre>
