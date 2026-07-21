@@ -126,7 +126,21 @@ class Array<T> {
 
     // Sorts the array in place into ascending order, as defined by the
     // payload's `less_than`.
-    public sort() -> None {}
+    public sort() -> None {
+        for (i: Integer = 0; i < this.length(); i++) {
+            var insert_index: Integer = i;
+            var current_value: T = this.buffer[i];
+            for (j: Integer = i - 1; j >= 0; j--) {
+                if (this.buffer[j] > current_value) {
+                    this.buffer[j + 1] = this.buffer[j];
+                    insert_index = j;
+                } else {
+                    break;
+                }
+            }
+            this.buffer[insert_index] = current_value;
+        }
+    }
 
     // Reverses the order of the elements in place.
     public reverse() -> None {
