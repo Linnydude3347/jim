@@ -43,60 +43,97 @@ class Integer {
     public to_string() -> String { return @i64_to_string(this); }
 
     // Return the absolute value of this integer.
-    public abs() -> Integer?{}
+    public abs() -> Integer {
+        if (this < 0) { return -this; }
+        return this;
+    }
 
     // Return -1 if this integer is negative, 0 if it is zero, and 1 if it
     // is positive.
-    public sign() -> Integer?{}
+    public sign() -> Integer {
+        if (this < 0) { return -1; }
+        if (this == 0) { return 0; }
+        return 1;
+    }
 
     // Return this integer raised to the power `exp`. Does not accept negative
     // exponents. If a negative exponent is passed, zero will be returned.
-    public pow(exp: Integer) -> Integer?{}
+    public pow(exp: Integer) -> Integer {
+        if (exp < 0) return 0;
+        var r: Integer = this;
+        for (i: Integer = 1; i <= exp; i++) {
+            r *= exp;
+        }
+        return r;
+    }
 
     // Return the smaller of this integer and `other`.
-    public min(other: Integer) -> Integer?{}
+    public min(other: Integer) -> Integer {
+        if (this < other) { return this; }
+        return other;
+    }
 
     // Return the larger of this integer and `other`.
-    public max(other: Integer) -> Integer?{}
+    public max(other: Integer) -> Integer {
+        if (this > other) { return this; }
+        return other;
+    }
 
     // Return this integer constrained to the range `[low, high]`: `low` when
     // below it, `high` when above it, the value itself otherwise.
-    public clamp(low: Integer, high: Integer) -> Integer?{}
+    public clamp(low: Integer, high: Integer) -> Integer {
+        if (this < low) { return low; }
+        if (this > high) { return high; }
+        return this;
+    }
 
     // Return true if this integer is divisible by two.
-    public is_even() -> Bool?{}
+    public is_even() -> Bool {
+        return this % 2 == 0;
+    }
 
     // Return true if this integer is not divisible by two.
-    public is_odd() -> Bool?{}
+    public is_odd() -> Bool {
+        return this % 2 != 0;
+    }
 
     // Return the Char with this byte value. Returns None unless this integer
     // is in `[0, 255]`.
-    public to_char() -> Char?{}
+    public to_char() -> Char { return @i64_to_char(this); }
 
     // Return the number of decimal digits in the absolute value of this
     // integer, e.g. `-1234` => 4. Zero has one digit.
-    public digit_count() -> Integer?{}
+    public digit_count() -> Integer {
+        var s: String = this.to_string();
+        var count: Integer = 0;
+        for (c: Char in s) {
+            if (c.is_digit()) {
+                count++;
+            }
+        }
+        return count;
+    }
 
     // Intrinsics needed for below functions
 
     // Return the bitwise AND of this integer and `other`.
-    public bit_and(other: Integer) -> Integer?{}
+    public bit_and(other: Integer) -> Integer { return @i64_and(this, other); }
 
     // Return the bitwise OR of this integer and `other`.
-    public bit_or(other: Integer) -> Integer?{}
+    public bit_or(other: Integer) -> Integer { return @i64_or(this, other); }
 
     // Return the bitwise XOR of this integer and `other`.
-    public bit_xor(other: Integer) -> Integer?{}
+    public bit_xor(other: Integer) -> Integer { return @i64_xor(this, other); }
 
     // Return the bitwise complement of this integer, with every bit flipped.
-    public bit_not() -> Integer?{}
+    public bit_not() -> Integer { return @i64_not(this); }
 
     // Return this integer shifted left by `bits` bit positions. Bits shifted
     // past the top are lost; zeros come in from the right.
-    public shift_left(bits: Integer) -> Integer?{}
+    public shift_left(bits: Integer) -> Integer { return @i64_shl(this, bits); }
 
     // Return this integer shifted right by `bits` bit positions. The shift is
     // arithmetic: the sign bit is preserved.
-    public shift_right(bits: Integer) -> Integer?{}
+    public shift_right(bits: Integer) -> Integer { return @i64_shr(this, bits); }
 
 }
