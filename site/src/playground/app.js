@@ -7,6 +7,15 @@ import init, { compile, compile_run, version } from "./pkg/jim_playground.js";
 
 // A menu of ready-to-run programs. Keys match the <option> values in index.html.
 const EXAMPLES = {
+
+  hello: `#import <io>
+
+function main() -> Integer {
+    print("Hello, jim!");
+    return 0;
+}
+`,
+
   vec2: `#import <io>
 
 // In jim, operators desugar to method calls: a + b becomes a.plus(b).
@@ -32,14 +41,6 @@ class Vec2 {
 function main() -> Integer {
     var sum: Vec2 = Vec2(1, 2) + Vec2(3, 4);
     print(sum.to_string());
-    return 0;
-}
-`,
-
-  hello: `#import <io>
-
-function main() -> Integer {
-    print("Hello, jim!");
     return 0;
 }
 `,
