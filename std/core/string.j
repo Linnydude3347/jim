@@ -278,7 +278,14 @@ class String {
 
     // Searches the string backwards for `value` and returns the position of
     // the last occurrence (-1 if not found).
-    public lastIndex(value: String) -> Integer?{}
+    public lastIndex(value: String) -> Integer {
+        for (i: Integer = this.length() - 1; i >= value.length(); i--) {
+            if (value == this.substr(i - value.length(), i)) {
+                return i;
+            }
+        }
+        return -1;
+    }
 
     // Splits this string at newlines and returns the lines. The line breaks
     // themselves are not included in the results.
@@ -286,36 +293,88 @@ class String {
 
     // Joins `values` into one string with this string between each pair,
     // e.g. `", ".join(["a", "b", "c"])` => `"a, b, c"`.
-    public join(values: Array<String>) -> String?{}
+    public join(values: Array<String>) -> String {
+        if (values.is_empty()) { return this; }
+        if (values.length() == 1) { return values[0] + this; }
+        var r: String = values[0];
+        for (i: Integer = 1; i < values.length(); i++) {
+            r = r + (this + values[i]);
+        }
+        return r;
+    }
 
     // Returns this string padded on the left with `c` until it is `n`
     // characters long. Strings already `n` or more characters long are
     // returned unchanged.
-    public padLeft(c: Char, n: Integer) -> String?{}
+    public padLeft(c: Char, n: Integer) -> String? {
+        if (this.length() >= n) { return this; }
+        var count: Integer = this.length() - n;
+        var r: String = "";
+        for (i: Integer = 0; i < count; i++) { r += c.to_string(); }
+        return r + this;
+    }
 
     // Returns this string padded on the right with `c` until it is `n`
     // characters long. Strings already `n` or more characters long are
     // returned unchanged.
-    public padRight(c: Char, n: Integer) -> String?{}
+    public padRight(c: Char, n: Integer) -> String {
+        if (this.length() >= n) { return this; }
+        var count: Integer = this.length() - n;
+        var r: String = "";
+        for (i: Integer = 0; i < count; i++) { r += c.to_string(); }
+        return this + r;
+    }
 
     // Returns this string without `prefix` if it starts with it, otherwise
     // returns the string unchanged.
-    public removePrefix(prefix: String) -> String?{}
+    public removePrefix(prefix: String) -> String {
+        var s: String = this.substr(0, prefix.length() - 1);
+        if (s == prefix) {
+            return this.substr(prefix.length(), this.length() - 1);
+        }
+        return this;
+    }
 
     // Returns this string without `suffix` if it ends with it, otherwise
     // returns the string unchanged.
-    public removeSuffix(suffix: String) -> String?{}
+    public removeSuffix(suffix: String) -> String {
+        var s: String = this.substr(this.length() - suffix.length(), this.length() - 1);
+        if (s == suffix) {
+            return this.substr(0, this.length() - suffix.length());
+        }
+        return this;
+    }
 
     // Returns this string with the case of every letter flipped: upper case
     // becomes lower case and vice versa.
-    public swapCase() -> String?{}
+    public swapCase() -> String {
+        var r: String = "";
+        for (c: Char in this) {
+            if (c.is_upper()) { r += c.to_lower().to_string(); }
+            else { r += c.to_upper().to_string(); }
+        }
+        return r;
+    }
 
     // Returns this string in title case: the first letter of every word
     // upper case, the rest lower case. Words are separated by whitespace.
-    public title() -> String?{}
+    public title() -> String {
+        var words: Array<String> = this.split(' ');
+        var r: String = "";
+        for (word: String in words) {
+            var s: String = word[0].to_upper().to_string();
+            for (i: Integer = 1; i < word.length(); i++) {
+                s += word[i].to_lower().to_string();
+            }
+            r += s;
+        }
+        return r;
+    }
 
     // Returns true if the string is in title case (see `title`).
-    public isTitle() -> Bool?{}
+    public isTitle() -> Bool {
+        return this == this.title();
+    }
 
     // Strings are compared as if both were lower case, so `"JIM"` equals
     // `"jim"`.
