@@ -235,12 +235,8 @@ class String {
         var end: Integer = this.length() - target.length() + 1;
         var i: Integer = 0;
 
-        // NOTE: This works for replacing strings at the start or end of the string
-        // TODO: Does not currently work for replacing segments in the middle of the string,
-        // or replacing multiple segments in one string
         while (i <= end) {
             var s: String = this.substr(i, i + target.length() - 1);
-            print(s);
             if (i == end - 1) {
                 if (s != target) {
                     r += s;
@@ -254,7 +250,7 @@ class String {
                 i++;
             } else {
                 r += new;
-                i += new.length() + 1;
+                i += target.length();
             }
         }
         return r;
