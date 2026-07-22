@@ -192,7 +192,7 @@ CodeMirror.defineSimpleMode("jim", {
 });
 
 const editor = CodeMirror(document.getElementById("editor"), {
-  value: EXAMPLES.vec2,
+  value: EXAMPLES.hello,
   mode: "jim",
   theme: "monokai",
   lineNumbers: true,
