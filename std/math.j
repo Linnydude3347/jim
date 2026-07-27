@@ -95,55 +95,55 @@ function dist(a: Array<Float>, b: Array<Float>) -> Float?{}
 // Intrinsics needed for below functions
 
 // Return the square root of the non-negative number `x`.
-function sqrt(x: Float) -> Float?{}
+function sqrt(x: Float) -> Float { return @f64_sqrt(x); }
 
 // Return the cube root of `x`.
-function cbrt(x: Float) -> Float?{}
+function cbrt(x: Float) -> Float { return @f64_cbrt(x); }
 
 // Return the length of the hypotenuse of a right triangle with legs `x` and
 // `y`, i.e. `sqrt(x^2 + y^2)`.
-function hypot(x: Float, y: Float) -> Float?{}
+function hypot(x: Float, y: Float) -> Float { return @f64_hypot(x, y); }
 
 // Return `e` raised to the power `x`, where `e` is the base of natural
 // logarithms.
-function exp(x: Float) -> Float?{}
+function exp(x: Float) -> Float { return @f64_exp(x); }
 
 // Return the natural logarithm of `x` (base `e`). `x` must be positive.
-function log(x: Float) -> Float?{}
+function log(x: Float) -> Float { return @f64_log(x); }
 
 // Return the base-2 logarithm of the positive number `x`.
-function log2(x: Float) -> Float?{}
+function log2(x: Float) -> Float { return @f64_log2(x); }
 
 // Return the base-10 logarithm of the positive number `x`.
-function log10(x: Float) -> Float?{}
+function log10(x: Float) -> Float { return @f64_log10(x); }
 
 // Return the sine of `x` radians.
-function sin(x: Float) -> Float?{}
+function sin(x: Float) -> Float { return @f64_sin(x); }
 
 // Return the cosine of `x` radians.
-function cos(x: Float) -> Float?{}
+function cos(x: Float) -> Float { return @f64_cos(x); }
 
 // Return the tangent of `x` radians.
-function tan(x: Float) -> Float?{}
+function tan(x: Float) -> Float { return @f64_tan(x); }
 
 // Return the arc sine of `x`, in radians. The result is in `[-pi/2, pi/2]`;
 // `x` must be in `[-1, 1]`.
-function asin(x: Float) -> Float?{}
+function asin(x: Float) -> Float { return @f64_asin(x); }
 
 // Return the arc cosine of `x`, in radians. The result is in `[0, pi]`;
 // `x` must be in `[-1, 1]`.
-function acos(x: Float) -> Float?{}
+function acos(x: Float) -> Float { return @f64_acos(x); }
 
 // Return the arc tangent of `x`, in radians. The result is in `[-pi/2, pi/2]`.
-function atan(x: Float) -> Float?{}
+function atan(x: Float) -> Float { return @f64_atan(x); }
 
 // Return `atan(y / x)`, in radians, using the signs of both arguments to pick
 // the correct quadrant. The result is in `[-pi, pi]`. Note the argument
 // order: `y` first, then `x`.
-function atan2(y: Float, x: Float) -> Float?{}
+function atan2(y: Float, x: Float) -> Float { return @f64_atan2(y, x); }
 
 // Return the floating-point remainder of `x / y`, with the sign of `x`.
-function fmod(x: Float, y: Float) -> Float?{}
+function fmod(x: Float, y: Float) -> Float { return @f64_fmod(x, y); }
 
 
 // Constants //
