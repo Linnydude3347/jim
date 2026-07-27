@@ -20,78 +20,81 @@ const BUILTIN_TYPES = [
     'Array', 'Vector', 'RawBuffer',
 ];
 
-// @intrinsics — mirrors docs/DESIGN.md §6 (std-only).
+// @intrinsics — mirrors docs/DESIGN.md §6 (std-only). Each entry is
+// { sig, doc }: the type signature and a per-intrinsic description.
 const INTRINSICS = {
-    i64_add: '(Integer, Integer) -> Integer — overflow-checked add',
-    i64_sub: '(Integer, Integer) -> Integer — overflow-checked subtract',
-    i64_mul: '(Integer, Integer) -> Integer — overflow-checked multiply',
-    i64_divtrunc: '(Integer, Integer) -> Integer — truncating division, panics on 0',
-    i64_mod: '(Integer, Integer) -> Integer — panics on 0',
-    i64_neg: '(Integer) -> Integer',
-    i64_eq: '(Integer, Integer) -> Bool',
-    i64_lt: '(Integer, Integer) -> Bool',
-    i64_to_f64: '(Integer) -> Float',
-    i64_to_string: '(Integer) -> String',
-    i64_to_char: '(Integer) -> Char — panics unless 0-255',
-    f64_add: '(Float, Float) -> Float',
-    f64_sub: '(Float, Float) -> Float',
-    f64_mul: '(Float, Float) -> Float',
-    f64_div: '(Float, Float) -> Float — IEEE inf/nan on /0',
-    f64_neg: '(Float) -> Float',
-    f64_eq: '(Float, Float) -> Bool',
-    f64_lt: '(Float, Float) -> Bool',
-    f64_to_i64: '(Float) -> Integer — truncates toward zero',
-    f64_to_string: '(Float) -> String',
-    bool_eq: '(Bool, Bool) -> Bool',
-    char_eq: '(Char, Char) -> Bool',
-    char_lt: '(Char, Char) -> Bool',
-    char_to_i64: '(Char) -> Integer',
-    char_to_string: '(Char) -> String',
-    str_len: '(String) -> Integer — bytes',
-    str_byte: '(String, Integer) -> Char — unchecked byte read',
-    str_concat: '(String, String) -> String',
-    str_eq: '(String, String) -> Bool',
-    str_lt: '(String, String) -> Bool',
-    str_slice: '(String, Integer, Integer) -> String — (s, start, len) zero-copy view, unchecked',
-    str_from_buf: '(RawBuffer<Char>, Integer) -> String — copies len bytes out (string builder)',
-    str_to_i64: '(String) -> Integer? — strict decimal parse, None if invalid',
-    str_to_f64: '(String) -> Float? — strict decimal/scientific parse, None if invalid',
-    f64_sqrt: '(Float) -> Float — IEEE: nan for negatives',
-    f64_cbrt: '(Float) -> Float',
-    f64_hypot: '(Float, Float) -> Float — sqrt(x^2 + y^2)',
-    f64_exp: '(Float) -> Float — e^x',
-    f64_log: '(Float) -> Float — natural log; IEEE: nan/-inf outside domain',
-    f64_log2: '(Float) -> Float',
-    f64_log10: '(Float) -> Float',
-    f64_sin: '(Float) -> Float — radians',
-    f64_cos: '(Float) -> Float — radians',
-    f64_tan: '(Float) -> Float — radians',
-    f64_asin: '(Float) -> Float — radians; IEEE: nan outside [-1, 1]',
-    f64_acos: '(Float) -> Float — radians; IEEE: nan outside [-1, 1]',
-    f64_atan: '(Float) -> Float — radians',
-    f64_atan2: '(Float, Float) -> Float — (y, x), radians',
-    f64_fmod: '(Float, Float) -> Float — remainder of x/y, sign of x',
-    f64_pow: '(Float, Float) -> Float — x^y',
-    f64_is_nan: '(Float) -> Bool',
-    f64_is_inf: '(Float) -> Bool',
-    f64_is_finite: '(Float) -> Bool',
-    i64_and: '(Integer, Integer) -> Integer — bitwise AND',
-    i64_or: '(Integer, Integer) -> Integer — bitwise OR',
-    i64_xor: '(Integer, Integer) -> Integer — bitwise XOR',
-    i64_not: '(Integer) -> Integer — bitwise complement',
-    i64_shl: '(Integer, Integer) -> Integer — shift left; panics outside 0-63',
-    i64_shr: '(Integer, Integer) -> Integer — arithmetic shift right; panics outside 0-63',
-    exc_msg: '(Exception) -> String',
-    print_string: '(String) -> None',
-    print_err: '(String) -> None — writes to stderr',
-    read_line: '() -> String? — one stdin line without the newline; None at EOF',
-    read_file: '(String) -> String? — whole file; None if unreadable',
-    write_file: '(String, String) -> Integer? — (path, content) bytes written; None on failure',
-    append_file: '(String, String) -> Integer? — (path, content) bytes written; None on failure',
-    file_exists: '(String) -> Bool',
-    panic: '(String) -> None — raises; caught by the nearest try',
-    buf_alloc: '(Integer) -> RawBuffer<T> — element type from context',
+    i64_add: { sig: '(Integer, Integer) -> Integer', doc: 'Integer addition. Overflow-checked: overflow panics instead of wrapping.' },
+    i64_sub: { sig: '(Integer, Integer) -> Integer', doc: 'Integer subtraction. Overflow-checked: overflow panics instead of wrapping.' },
+    i64_mul: { sig: '(Integer, Integer) -> Integer', doc: 'Integer multiplication. Overflow-checked: overflow panics instead of wrapping.' },
+    i64_divtrunc: { sig: '(Integer, Integer) -> Integer', doc: 'Truncating integer division. Panics on a zero divisor.' },
+    i64_mod: { sig: '(Integer, Integer) -> Integer', doc: 'Integer remainder. Panics on a zero divisor.' },
+    i64_neg: { sig: '(Integer) -> Integer', doc: 'Integer negation.' },
+    i64_eq: { sig: '(Integer, Integer) -> Bool', doc: 'Integer equality.' },
+    i64_lt: { sig: '(Integer, Integer) -> Bool', doc: 'Integer less-than.' },
+    i64_to_f64: { sig: '(Integer) -> Float', doc: 'Converts an Integer to a Float.' },
+    i64_to_string: { sig: '(Integer) -> String', doc: 'Formats an Integer as its decimal String.' },
+    i64_to_char: { sig: '(Integer) -> Char', doc: 'Converts a byte value to a Char. Panics unless the value is in 0–255 (Char is a byte).' },
+    f64_add: { sig: '(Float, Float) -> Float', doc: 'Float addition.' },
+    f64_sub: { sig: '(Float, Float) -> Float', doc: 'Float subtraction.' },
+    f64_mul: { sig: '(Float, Float) -> Float', doc: 'Float multiplication.' },
+    f64_div: { sig: '(Float, Float) -> Float', doc: 'Float division. Division by zero follows IEEE (±inf/nan), never panics.' },
+    f64_neg: { sig: '(Float) -> Float', doc: 'Float negation.' },
+    f64_eq: { sig: '(Float, Float) -> Bool', doc: 'Float equality (IEEE — NaN is not equal to anything).' },
+    f64_lt: { sig: '(Float, Float) -> Bool', doc: 'Float less-than (IEEE — comparisons with NaN are false).' },
+    f64_to_i64: { sig: '(Float) -> Integer', doc: 'Converts a Float to an Integer, truncating toward zero.' },
+    f64_to_string: { sig: '(Float) -> String', doc: 'Formats a Float as a String.' },
+    bool_eq: { sig: '(Bool, Bool) -> Bool', doc: 'Bool equality.' },
+    char_eq: { sig: '(Char, Char) -> Bool', doc: 'Char equality.' },
+    char_lt: { sig: '(Char, Char) -> Bool', doc: 'Char less-than (byte value).' },
+    char_to_i64: { sig: '(Char) -> Integer', doc: 'The byte value of a Char (0–255).' },
+    char_to_string: { sig: '(Char) -> String', doc: 'A one-byte String containing the Char.' },
+    str_len: { sig: '(String) -> Integer', doc: 'String length in bytes (UTF-8).' },
+    str_byte: { sig: '(String, Integer) -> Char', doc: 'Reads one byte of the String. Unchecked — String.get owns the bounds check.' },
+    str_concat: { sig: '(String, String) -> String', doc: 'Concatenates two Strings.' },
+    str_eq: { sig: '(String, String) -> Bool', doc: 'Byte-wise String equality.' },
+    str_lt: { sig: '(String, String) -> Bool', doc: 'Lexicographic (byte-wise) String less-than.' },
+    str_slice: { sig: '(String, Integer, Integer) -> String', doc: '`(s, start, len)` — zero-copy view into the original bytes (safe: strings are immutable). Unchecked — the std owns the bounds checks.' },
+    str_from_buf: { sig: '(RawBuffer<Char>, Integer) -> String', doc: '`(buf, len)` — copies `len` bytes out into a fresh String; the string-builder finish.' },
+    str_to_i64: { sig: '(String) -> Integer?', doc: 'Strict decimal parse (optional sign + digits). None if invalid or overflowing.' },
+    str_to_f64: { sig: '(String) -> Float?', doc: 'Strict decimal/scientific parse (`"2.5"`, `"-1e9"`). None if invalid.' },
+    f64_sqrt: { sig: '(Float) -> Float', doc: 'Square root. IEEE-permissive: nan for negative input.' },
+    f64_cbrt: { sig: '(Float) -> Float', doc: 'Cube root.' },
+    f64_hypot: { sig: '(Float, Float) -> Float', doc: '`sqrt(x² + y²)` without intermediate overflow.' },
+    f64_exp: { sig: '(Float) -> Float', doc: '`e^x`.' },
+    f64_log: { sig: '(Float) -> Float', doc: 'Natural logarithm. IEEE-permissive: nan/-inf outside the domain.' },
+    f64_log2: { sig: '(Float) -> Float', doc: 'Base-2 logarithm. IEEE-permissive: nan/-inf outside the domain.' },
+    f64_log10: { sig: '(Float) -> Float', doc: 'Base-10 logarithm. IEEE-permissive: nan/-inf outside the domain.' },
+    f64_sin: { sig: '(Float) -> Float', doc: 'Sine (radians).' },
+    f64_cos: { sig: '(Float) -> Float', doc: 'Cosine (radians).' },
+    f64_tan: { sig: '(Float) -> Float', doc: 'Tangent (radians).' },
+    f64_asin: { sig: '(Float) -> Float', doc: 'Arcsine (radians). IEEE-permissive: nan outside [-1, 1].' },
+    f64_acos: { sig: '(Float) -> Float', doc: 'Arccosine (radians). IEEE-permissive: nan outside [-1, 1].' },
+    f64_atan: { sig: '(Float) -> Float', doc: 'Arctangent (radians).' },
+    f64_atan2: { sig: '(Float, Float) -> Float', doc: 'Two-argument arctangent of `(y, x)` — note the order. Radians.' },
+    f64_fmod: { sig: '(Float, Float) -> Float', doc: 'Remainder of `x / y`, with the sign of `x`.' },
+    f64_pow: { sig: '(Float, Float) -> Float', doc: '`x^y`.' },
+    f64_is_nan: { sig: '(Float) -> Bool', doc: 'True if the Float is NaN.' },
+    f64_is_inf: { sig: '(Float) -> Bool', doc: 'True if the Float is +inf or -inf.' },
+    f64_is_finite: { sig: '(Float) -> Bool', doc: 'True if the Float is neither NaN nor infinite.' },
+    i64_and: { sig: '(Integer, Integer) -> Integer', doc: 'Bitwise AND.' },
+    i64_or: { sig: '(Integer, Integer) -> Integer', doc: 'Bitwise OR.' },
+    i64_xor: { sig: '(Integer, Integer) -> Integer', doc: 'Bitwise XOR.' },
+    i64_not: { sig: '(Integer) -> Integer', doc: 'Bitwise complement.' },
+    i64_shl: { sig: '(Integer, Integer) -> Integer', doc: 'Shift left; overflow bits are dropped. Panics unless the shift amount is in 0–63.' },
+    i64_shr: { sig: '(Integer, Integer) -> Integer', doc: 'Arithmetic (sign-preserving) shift right. Panics unless the shift amount is in 0–63.' },
+    exc_msg: { sig: '(Exception) -> String', doc: 'The message of a caught exception.' },
+    print_string: { sig: '(String) -> None', doc: 'Writes the String to stdout, followed by a newline.' },
+    print_err: { sig: '(String) -> None', doc: 'Writes the String to stderr, followed by a newline.' },
+    read_line: { sig: '() -> String?', doc: 'Reads one line from stdin without the newline (CRLF handled). None at EOF.' },
+    read_file: { sig: '(String) -> String?', doc: 'Reads a whole file as one String. None if unreadable.' },
+    write_file: { sig: '(String, String) -> Integer?', doc: '`(path, content)` — replaces the file’s contents, creating it if missing. Bytes written; None on failure.' },
+    append_file: { sig: '(String, String) -> Integer?', doc: '`(path, content)` — appends to the file, creating it if missing. Bytes written; None on failure.' },
+    file_exists: { sig: '(String) -> Bool', doc: 'True if a file exists at the path.' },
+    panic: { sig: '(String) -> None', doc: 'Raises: caught by the nearest `try`, else prints the message to stderr with its file:line and function, and exits 1.' },
+    buf_alloc: { sig: '(Integer) -> RawBuffer<T>', doc: 'Allocates raw storage for `n` elements; the element type comes from context (`var b: RawBuffer<T> = @buf_alloc(n);`). Unchecked — bounds checks and growth logic belong in the jim code on top.' },
 };
+
+const INTRINSIC_NOTE = 'Intrinsic — only usable inside the standard library (docs/DESIGN.md §6).';
 
 let diagnostics;
 // file path -> scan result ({ functions, classes, moduleDoc, file })
@@ -341,14 +344,14 @@ function completionItems(doc, pos) {
         // that start with '@' and quietly drops most of the list.
         const atCol = prefix.lastIndexOf('@');
         const range = new vscode.Range(pos.line, atCol, pos.line, pos.character);
-        for (const [name, sig] of Object.entries(INTRINSICS)) {
+        for (const [name, { sig, doc }] of Object.entries(INTRINSICS)) {
             const it = new vscode.CompletionItem(`@${name}`, vscode.CompletionItemKind.Function);
             it.range = range;
             it.insertText = `@${name}`;
             it.filterText = `@${name}`;
             it.sortText = name;
             it.detail = `@${name}${sig}`;
-            it.documentation = 'Intrinsic — only usable inside the standard library.';
+            it.documentation = new vscode.MarkdownString(`${doc}\n\n${INTRINSIC_NOTE}`);
             items.push(it);
         }
         return items;
@@ -472,14 +475,10 @@ function signatureHelp(doc, pos) {
 
     if (ctx.callee.startsWith('@')) {
         const name = ctx.callee.slice(1);
-        const raw = INTRINSICS[name];
-        if (raw) {
-            const paramsText = (raw.match(/^\(([^)]*)\)/) || [, ''])[1].trim();
-            sigs.push(sigInfoFromParams(
-                `@${name}${raw}`,
-                paramsText,
-                'Intrinsic — only usable inside the standard library.'
-            ));
+        const intr = INTRINSICS[name];
+        if (intr) {
+            const paramsText = (intr.sig.match(/^\(([^)]*)\)/) || [, ''])[1].trim();
+            sigs.push(sigInfoFromParams(`@${name}${intr.sig}`, paramsText, intr.doc));
         }
     } else {
         const { functions, classes } = allSymbols(doc.uri.fsPath);
@@ -561,11 +560,11 @@ function hoverFor(doc, pos) {
     const word = doc.getText(range);
 
     if (word.startsWith('@')) {
-        const sig = INTRINSICS[word.slice(1)];
-        if (!sig) return null;
+        const intr = INTRINSICS[word.slice(1)];
+        if (!intr) return null;
         const md = new vscode.MarkdownString();
-        md.appendCodeblock(`${word}${sig}`, 'jim');
-        md.appendMarkdown('Intrinsic — only usable inside the standard library (docs/DESIGN.md §6).');
+        md.appendCodeblock(`${word}${intr.sig}`, 'jim');
+        md.appendMarkdown(`${intr.doc}\n\n${INTRINSIC_NOTE}`);
         return new vscode.Hover(md, range);
     }
 
